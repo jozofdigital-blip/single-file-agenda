@@ -1,7 +1,8 @@
 import { format, addWeeks, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Archive } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 
 interface WeekCalendarProps {
@@ -10,6 +11,7 @@ interface WeekCalendarProps {
 }
 
 export const WeekCalendar = ({ selectedDate, onSelectDate }: WeekCalendarProps) => {
+  const navigate = useNavigate();
   const [weekOffset, setWeekOffset] = useState(0);
   
   const startDate = startOfWeek(addWeeks(new Date(), weekOffset), { 
@@ -22,6 +24,19 @@ export const WeekCalendar = ({ selectedDate, onSelectDate }: WeekCalendarProps) 
   return (
     <div className="bg-card border-b border-border sticky top-0 z-10 backdrop-blur-sm bg-card/95">
       <div className="container max-w-2xl mx-auto px-4 py-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-[hsl(250_70%_60%)] bg-clip-text text-transparent">
+            Ежедневник
+          </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/archive")}
+            className="shrink-0"
+          >
+            <Archive className="h-5 w-5" />
+          </Button>
+        </div>
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="ghost"
