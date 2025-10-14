@@ -1,6 +1,6 @@
 import { format, addWeeks, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Archive } from "lucide-react";
+import { ChevronLeft, ChevronRight, Archive, List } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -28,14 +28,24 @@ export const WeekCalendar = ({ selectedDate, onSelectDate }: WeekCalendarProps) 
           <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-[hsl(250_70%_60%)] bg-clip-text text-transparent">
             Ежедневник
           </h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/archive")}
-            className="shrink-0"
-          >
-            <Archive className="h-5 w-5" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/all-tasks")}
+              className="shrink-0"
+            >
+              <List className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/archive")}
+              className="shrink-0"
+            >
+              <Archive className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
         <div className="flex items-center justify-between gap-2">
           <Button

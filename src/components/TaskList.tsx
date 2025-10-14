@@ -6,15 +6,17 @@ interface Task {
   id: string;
   text: string;
   date: string;
+  originalDate?: string;
 }
 
 interface TaskListProps {
   tasks: Task[];
   selectedDate: Date;
   onDeleteTask: (id: string) => void;
+  onUpdateTask: (id: string, newText: string, newDate: string) => void;
 }
 
-export const TaskList = ({ tasks, selectedDate, onDeleteTask }: TaskListProps) => {
+export const TaskList = ({ tasks, selectedDate, onDeleteTask, onUpdateTask }: TaskListProps) => {
   const dateString = format(selectedDate, "yyyy-MM-dd");
   const todayTasks = tasks.filter((task) => task.date === dateString);
 
@@ -47,7 +49,11 @@ export const TaskList = ({ tasks, selectedDate, onDeleteTask }: TaskListProps) =
               <TaskItem
                 key={task.id}
                 task={task.text}
+                originalDate={task.originalDate}
                 onDelete={() => onDeleteTask(task.id)}
+                onUpdate={(newText, newDate) =>
+                  onUpdateTask(task.id, newText, newDate)
+                }
               />
             ))
           )}
