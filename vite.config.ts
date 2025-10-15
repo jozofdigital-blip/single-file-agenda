@@ -25,8 +25,8 @@ export default defineConfig(({ mode }) => ({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        scope: mode === "production" ? '/single-file-agenda/' : '/',
+        start_url: mode === "production" ? '/single-file-agenda/' : '/',
         icons: [
           {
             src: '/icon-192.png',
