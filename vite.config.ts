@@ -1,20 +1,35 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
+
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig(({ mode }) => ({
-  base: mode === "production" ? "/single-file-agenda/" : "/",
-  server: {
-    host: "::",
-    port: 8080,
-  },
+export default defineConfig(async ({ mode }) => {
+  const plugins: any[] = [];
 
-  plugins: [
-    react(),
-    mode === "development" && componentTagger(),
-    VitePWA({
+  const reactPlugin: any = react();
+  if (Array.isArray(reactPlugin)) {
+    plugins.push(...reactPlugin);
+  } else {
+    plugins.push(reactPlugin);
+  }
+
+  if (mode === "development") {
+    try {
+      const { componentTagger } = await import("lovable-tagger");
+      const tagger: any = componentTagger();
+      if (Array.isArray(tagger)) {
+        plugins.push(...tagger);
+      } else {
+        plugins.push(tagger);
+      }
+    } catch {
+      // Plugin optional in CI/Pages
+    }
+  }
+
+  plugins.push(
+    ...VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
@@ -28,18 +43,8 @@ export default defineConfig(({ mode }) => ({
         scope: mode === "production" ? '/single-file-agenda/' : '/',
         start_url: mode === "production" ? '/single-file-agenda/' : '/',
         icons: [
-          {
-            src: 'icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: 'icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ]
       },
       workbox: {
@@ -62,11 +67,19 @@ export default defineConfig(({ mode }) => ({
         ]
       }
     })
-  ].filter(Boolean),
+  );
 
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+  return {
+    base: mode === "production" ? "/single-file-agenda/" : "/",
+    server: {
+      host: "::",
+      port: 8080,
     },
-  },
-}));
+    plugins,
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+  };
+});
