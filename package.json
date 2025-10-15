@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build:pages": "vite build --mode pages",
+    "build:pwa": "vite build --mode pwa",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:pages": "vite preview --mode pages",
+    "preview:pwa": "vite preview --mode pwa"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
