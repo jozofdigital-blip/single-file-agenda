@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
@@ -11,21 +11,28 @@ const APP_LANG = "ru";
 const APP_ID = "ru.lovable.singlefileagenda";
 
 export default defineConfig(async ({ mode }) => {
-  const isPagesBuild = mode === "pages";
+  const env = loadEnv(mode, process.cwd(), "");
 
-  const base = isPagesBuild ? "/single-file-agenda/" : "/";
-  const outDir = isPagesBuild ? "docs" : "dist";
-  const startUrl = isPagesBuild ? "/single-file-agenda/" : "/";
-  const scope = startUrl;
+  const rawBase = env.VITE_APP_BASE ?? (mode === "development" ? "/" : "/single-file-agenda/");
+  const base = rawBase.endsWith("/") ? rawBase : `${rawBase}/`;
+  const outDir = env.VITE_OUTPUT_DIR ?? (base === "/" ? "dist" : "docs");
+  const startUrl = env.VITE_PWA_START_URL ?? base;
+  const scope = env.VITE_PWA_SCOPE ?? base;
+  const appName = env.VITE_APP_NAME ?? "Ежедневник Задач";
+  const shortName = env.VITE_APP_SHORT_NAME ?? "Задачи";
+  const description = env.VITE_APP_DESCRIPTION ?? "Простой и красивый ежедневник для управления вашими задачами";
+  const lang = env.VITE_APP_LANG ?? "ru";
+  const appId = env.VITE_PWA_ID ?? "ru.lovable.singlefileagenda";
 
-  const shortcutUrl = (targetPath: string) => {
-    const normalizedPath = targetPath.startsWith("/") ? targetPath : `/${targetPath}`;
-
-    if (isPagesBuild) {
-      return `/single-file-agenda/#${normalizedPath}`;
+  const useHashRouter = env.VITE_USE_HASH_ROUTER === "true";
+  const shortcutUrl = (path: string) => {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    if (useHashRouter) {
+      return `${base}#${normalizedPath}`;
     }
 
-    return normalizedPath;
+    const normalizedBase = base === "/" ? "" : base.slice(0, -1);
+    return `${normalizedBase}${normalizedPath}` || "/";
   };
 
   const plugins: any[] = [];
@@ -55,11 +62,11 @@ export default defineConfig(async ({ mode }) => {
     registerType: 'autoUpdate',
     includeAssets: ['favicon.ico', 'robots.txt'],
     manifest: {
-      id: APP_ID,
-      name: APP_NAME,
-      short_name: APP_SHORT_NAME,
-      description: APP_DESCRIPTION,
-      lang: APP_LANG,
+      id: appId,
+      name: appName,
+      short_name: shortName,
+      description,
+      lang,
       theme_color: '#ffffff',
       background_color: '#ffffff',
       display: 'standalone',

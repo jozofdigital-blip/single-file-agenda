@@ -5,12 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:pages",
     "build:pages": "vite build --mode pages",
     "build:pwa": "vite build --mode pwa",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "preview:pages": "vite preview --mode pages",
+    "preview": "vite preview --mode pages",
     "preview:pwa": "vite preview --mode pwa"
   },
   "dependencies": {

@@ -11,25 +11,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const isPagesBuild = import.meta.env.MODE === "pages";
-const rawBase = import.meta.env.BASE_URL || "/";
-const normalizedBase = rawBase.endsWith("/") ? rawBase.slice(0, -1) : rawBase;
-const browserBasename = normalizedBase === "" ? undefined : normalizedBase;
-
-const Router = ({ children }: { children: ReactNode }) => {
-  if (isPagesBuild) {
-    return <HashRouter>{children}</HashRouter>;
-  }
-
-  return <BrowserRouter basename={browserBasename}>{children}</BrowserRouter>;
-};
+const useHashRouter = import.meta.env.VITE_USE_HASH_ROUTER === "true";
+const Router = useHashRouter ? HashRouter : BrowserRouter;
+const rawBase = import.meta.env.VITE_APP_BASE || import.meta.env.BASE_URL || "/";
+const basename = rawBase === "/"
+  ? ""
+  : rawBase.endsWith("/")
+    ? rawBase.slice(0, -1)
+    : rawBase;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <Router>
+      <Router basename={basename}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/archive" element={<Archive />} />

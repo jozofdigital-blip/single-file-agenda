@@ -69,13 +69,13 @@ Simply open [Lovable](https://lovable.dev/projects/c67126f2-0840-4136-8597-d323d
 This repository now contains an automated GitHub Actions workflow that builds the production bundle and publishes it to GitHub Pages. To enable it:
 
 1. In your repository settings set **Pages → Build and deployment** to use **GitHub Actions**.
-2. Push to the `main` branch. The workflow (`.github/workflows/deploy.yml`) will install dependencies, run `npm run build:pages`, upload the generated `docs/` folder as an artifact and deploy it.
+2. Push to the `main` branch. The workflow (`.github/workflows/deploy-pages.yml`) will install dependencies, run `npm run build:pages`, upload the generated `docs/` folder as an artifact and deploy it.
 
 You can also build the `docs/` folder locally when you need to inspect the production output:
 
 ```sh
 npm run build:pages
-npm run preview:pages
+npm run preview
 ```
 
 ### Preparing a PWA package for RuStore
