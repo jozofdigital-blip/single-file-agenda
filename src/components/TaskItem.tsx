@@ -37,28 +37,17 @@ export const TaskItem = ({ task, originalDate, onDelete, onUpdate }: TaskItemPro
   return (
     <>
       <div
-        onClick={handleComplete}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (
-            event.key === "Enter" ||
-            event.key === " " ||
-            event.key === "Space" ||
-            event.key === "Spacebar"
-          ) {
-            event.preventDefault();
-            handleComplete();
-          }
-        }}
-        className={`group relative flex items-start gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-soft cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+        className={`group flex items-start gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-soft ${
           isDeleting ? "animate-fade-out" : "animate-fade-in"
         }`}
       >
-        <div className="flex items-center justify-center w-5 h-5 rounded-full border-2 border-muted-foreground/30 group-hover:border-primary transition-colors duration-300 shrink-0 mt-0.5">
+        <div
+          onClick={handleComplete}
+          className="flex items-center justify-center w-5 h-5 rounded-full border-2 border-muted-foreground/30 group-hover:border-primary transition-colors duration-300 shrink-0 mt-0.5 cursor-pointer"
+        >
           <Check className="w-3 h-3 text-transparent group-hover:text-primary transition-colors duration-300" />
         </div>
-        <div className="flex-1 pr-10">
+        <div className="flex-1">
           <p className="text-foreground leading-relaxed">{task}</p>
           {originalDate && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -68,10 +57,8 @@ export const TaskItem = ({ task, originalDate, onDelete, onUpdate }: TaskItemPro
         </div>
         {onUpdate && (
           <button
-            type="button"
             onClick={handleEdit}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full border border-transparent bg-background shadow-sm transition-colors duration-200 hover:border-primary/60 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            aria-label="Редактировать задачу"
+            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-accent rounded shrink-0"
           >
             <Edit2 className="w-4 h-4 text-muted-foreground" />
           </button>
