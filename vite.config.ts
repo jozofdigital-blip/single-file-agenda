@@ -4,8 +4,6 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
-  base: '/single-file-agenda/', // 👈 ОБЯЗАТЕЛЬНО для GitHub Pages
-
   server: {
     host: "::",
     port: 8080,
