@@ -4,6 +4,12 @@ import path from "path";
 
 import { VitePWA } from 'vite-plugin-pwa';
 
+const APP_NAME = "Ежедневник Задач";
+const APP_SHORT_NAME = "Задачи";
+const APP_DESCRIPTION = "Простой и красивый ежедневник для управления вашими задачами";
+const APP_LANG = "ru";
+const APP_ID = "ru.lovable.singlefileagenda";
+
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
