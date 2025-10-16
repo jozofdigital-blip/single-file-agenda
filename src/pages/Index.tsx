@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import { TaskList } from "@/components/TaskList";
 import { TaskInput } from "@/components/TaskInput";
+import { TelegramLogin } from "@/components/TelegramLogin";
 import { toast } from "sonner";
 import { useTelegramAuth } from "@/hooks/useTelegramAuth";
 import { useTasks } from "@/hooks/useTasks";
@@ -10,7 +11,7 @@ import { useTasks } from "@/hooks/useTasks";
 const Index = () => {
   console.log('[Index] mount');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { user, loading: authLoading } = useTelegramAuth();
+  const { user, loading: authLoading, signInWithTelegram } = useTelegramAuth();
   const {
     tasks,
     loading: tasksLoading,
@@ -19,6 +20,8 @@ const Index = () => {
     deleteTask,
     moveOverdueTasks,
   } = useTasks(user?.id);
+
+  const isInTelegram = typeof window !== 'undefined' && Boolean(window.Telegram?.WebApp);
 
   useEffect(() => {
     console.log('[Index] user', user?.id, 'authLoading', authLoading);
@@ -42,10 +45,22 @@ const Index = () => {
     toast.success('Задача выполнена');
   };
 
-  if (authLoading || tasksLoading) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
         <p className="text-muted-foreground">Загрузка...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <TelegramLogin onLogin={signInWithTelegram} isInTelegram={isInTelegram} />;
+  }
+
+  if (tasksLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
+        <p className="text-muted-foreground">Загрузка задач...</p>
       </div>
     );
   }
