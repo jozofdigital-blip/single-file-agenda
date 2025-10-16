@@ -2,8 +2,71 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const firstNonEmpty = (
+  ...values: Array<string | undefined | null>
+): string | undefined => values.find((value) => typeof value === 'string' && value.length > 0);
+
+const getGlobalEnv = (): Record<string, string | undefined> | undefined => {
+  if (typeof globalThis === 'undefined') return undefined;
+  const candidates = [
+    (globalThis as any).__ENV__,
+    (globalThis as any).__RUNTIME_CONFIG__,
+    (globalThis as any).__APP_ENV__,
+    (globalThis as any).__PUBLIC_ENV__,
+    (globalThis as any).__LOVABLE_ENV__,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === 'object') {
+      return candidate as Record<string, string | undefined>;
+    }
+  }
+
+  return undefined;
+};
+
+const getMetaContent = (name: string): string | undefined => {
+  if (typeof document === 'undefined') return undefined;
+  const tag = document.querySelector(`meta[name="${name}"]`);
+  if (!tag) return undefined;
+  const value = tag.getAttribute('content')?.trim();
+  return value || undefined;
+};
+
+const runtimeEnv = getGlobalEnv();
+
+const SUPABASE_URL = firstNonEmpty(
+  import.meta.env.VITE_SUPABASE_URL,
+  runtimeEnv?.VITE_SUPABASE_URL,
+  runtimeEnv?.SUPABASE_URL,
+  runtimeEnv?.supabaseUrl,
+  getMetaContent('supabase-url'),
+);
+
+const SUPABASE_PUBLISHABLE_KEY = firstNonEmpty(
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  import.meta.env.VITE_SUPABASE_PUBLIC_ANON_KEY,
+  runtimeEnv?.VITE_SUPABASE_PUBLISHABLE_KEY,
+  runtimeEnv?.VITE_SUPABASE_ANON_KEY,
+  runtimeEnv?.VITE_SUPABASE_PUBLIC_ANON_KEY,
+  runtimeEnv?.SUPABASE_ANON_KEY,
+  runtimeEnv?.supabaseAnonKey,
+  getMetaContent('supabase-anon-key'),
+);
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  const missingVars = [
+    !SUPABASE_URL ? 'VITE_SUPABASE_URL' : null,
+    !SUPABASE_PUBLISHABLE_KEY
+      ? 'VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY)'
+      : null,
+  ].filter(Boolean);
+
+  throw new Error(
+    `Supabase client is missing environment variables: ${missingVars.join(', ')}`,
+  );
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
