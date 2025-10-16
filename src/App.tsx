@@ -15,7 +15,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <BrowserRouter basename={(typeof window !== 'undefined' && window.location.hostname.endsWith('github.io'))
+        ? `/${window.location.pathname.split('/')[1] || ''}/`
+        : '/'}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/archive" element={<Archive />} />
