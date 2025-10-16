@@ -72,6 +72,12 @@ export const useTelegramAuth = () => {
         }
       } else {
         console.log("[TG AUTH] Not in Telegram WebApp, signed in anonymously");
+        try {
+          await supabase.from("profiles").upsert({ id: authData.user.id });
+          console.log("[TG AUTH] placeholder profile created");
+        } catch (e) {
+          console.error("[TG AUTH] profile upsert (placeholder) error:", e);
+        }
       }
     } catch (error) {
       console.error("[TG AUTH] signInWithTelegram error:", error);
