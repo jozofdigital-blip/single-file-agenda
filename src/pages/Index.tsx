@@ -45,33 +45,6 @@ const Index = () => {
     toast.success('Задача выполнена');
   };
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
-        <p className="text-muted-foreground">Загрузка...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <TelegramLogin onLogin={signInWithTelegram} onOAuth={linkTelegramFromBrowser} isInTelegram={isInTelegram} />;
-  }
-
-  if (!profileReady) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
-        <p className="text-muted-foreground">Подготовка профиля...</p>
-      </div>
-    );
-  }
-
-  if (tasksLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
-        <p className="text-muted-foreground">Загрузка задач...</p>
-      </div>
-    );
-  }
 
   console.log('[Index] render tasks', tasks.length);
 
@@ -85,7 +58,21 @@ const Index = () => {
         onDeleteTask={handleDeleteTask}
         onUpdateTask={handleUpdateTask}
       />
-      <TaskInput onAddTask={handleAddTask} />
+      {!user ? (
+        <TelegramLogin
+          variant="inline"
+          onLogin={signInWithTelegram}
+          onOAuth={linkTelegramFromBrowser}
+          isInTelegram={isInTelegram}
+        />
+      ) : !profileReady ? (
+        <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 sm:px-6 sm:py-4">
+          <div className="md:mx-auto md:max-w-2xl text-sm text-muted-foreground">Подготовка профиля...</div>
+        </div>
+      ) : (
+        <TaskInput onAddTask={handleAddTask} />
+      )}
+
     </div>
   );
 };
