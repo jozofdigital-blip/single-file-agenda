@@ -36,7 +36,19 @@ export const useTelegramAuth = () => {
         tg.expand();
         
         const initData = tg.initDataUnsafe;
+        const initDataString = (tg as any).initData as string | undefined;
         console.log("[TG AUTH] initDataUnsafe.user exists:", Boolean(initData?.user));
+
+        // Verify on backend
+        if (initDataString) {
+          const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke('verify-telegram', {
+            body: { type: 'webapp', initData: initDataString },
+          });
+          if (verifyErr || !verifyResp?.ok) {
+            console.error('[TG AUTH] verify-telegram failed', verifyErr || verifyResp);
+            return;
+          }
+        }
         
         if (initData?.user) {
           const telegramUser: TelegramUser = initData.user;
@@ -102,7 +114,44 @@ export const useTelegramAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  return { user, session, loading, signInWithTelegram };
+  const linkTelegramFromBrowser = async (payload: any) => {
+    try {
+      // Verify via edge function
+      const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke('verify-telegram', {
+        body: { type: 'widget', payload },
+      });
+      if (verifyErr || !verifyResp?.ok) {
+        console.error('[TG AUTH] widget verify failed', verifyErr || verifyResp);
+        return;
+      }
+
+      const { data: existing } = await supabase.auth.getSession();
+      if (!existing.session) {
+        const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+        if (authError) {
+          console.error('[TG AUTH] anon sign-in error', authError);
+          return;
+        }
+        existing.session = { ...existing.session, user: authData.user } as any;
+      }
+
+      const u = verifyResp.user || payload;
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: existing.session!.user.id,
+          telegram_id: u.id,
+          username: u.username,
+          first_name: u.first_name,
+          last_name: u.last_name,
+        });
+      if (profileError) console.error('[TG AUTH] profile upsert error', profileError);
+    } catch (e) {
+      console.error('[TG AUTH] linkTelegramFromBrowser error', e);
+    }
+  };
+
+  return { user, session, loading, signInWithTelegram, linkTelegramFromBrowser };
 };
 
 // Type declaration for Telegram WebApp
@@ -112,9 +161,10 @@ declare global {
       WebApp: {
         ready: () => void;
         expand: () => void;
-        initDataUnsafe: {
-          user?: TelegramUser;
-        };
+          initDataUnsafe: {
+            user?: TelegramUser;
+          };
+          initData?: string;
       };
     };
   }

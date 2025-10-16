@@ -11,7 +11,7 @@ import { useTasks } from "@/hooks/useTasks";
 const Index = () => {
   console.log('[Index] mount');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { user, loading: authLoading, signInWithTelegram } = useTelegramAuth();
+  const { user, loading: authLoading, signInWithTelegram, linkTelegramFromBrowser } = useTelegramAuth();
   const {
     tasks,
     loading: tasksLoading,
@@ -54,7 +54,7 @@ const Index = () => {
   }
 
   if (!user) {
-    return <TelegramLogin onLogin={signInWithTelegram} isInTelegram={isInTelegram} />;
+    return <TelegramLogin onLogin={signInWithTelegram} onOAuth={linkTelegramFromBrowser} isInTelegram={isInTelegram} />;
   }
 
   if (tasksLoading) {

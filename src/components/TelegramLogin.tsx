@@ -3,10 +3,11 @@ import { Card } from "./ui/card";
 
 interface TelegramLoginProps {
   onLogin: () => void;
+  onOAuth: (payload: any) => void;
   isInTelegram: boolean;
 }
 
-export const TelegramLogin = ({ onLogin, isInTelegram }: TelegramLoginProps) => {
+export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram }: TelegramLoginProps) => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-secondary/20 p-4">
       <Card className="w-full max-w-md p-8 space-y-6">
@@ -26,9 +27,26 @@ export const TelegramLogin = ({ onLogin, isInTelegram }: TelegramLoginProps) => 
             </p>
           ) : (
             <div className="bg-secondary/50 rounded-lg p-4 mb-2">
-              <p className="text-sm text-muted-foreground">
-                💡 Для привязки Telegram откройте приложение через бота в Telegram
+              <p className="text-sm text-muted-foreground mb-2">
+                Войдите через Telegram ниже
               </p>
+              <div id="tg-login-widget" className="flex justify-center" />
+              <script
+                async
+                src="https://telegram.org/js/telegram-widget.js?22"
+                data-telegram-login="my_helpday_bot"
+                data-size="large"
+                data-userpic="false"
+                data-request-access="write"
+                data-onauth="onTelegramAuth"
+              ></script>
+              <script>
+                {`
+                window.onTelegramAuth = function(user){
+                  window.dispatchEvent(new CustomEvent('tg-oauth', { detail: user }));
+                }
+                `}
+              </script>
             </div>
           )}
           <Button
@@ -55,6 +73,15 @@ export const TelegramLogin = ({ onLogin, isInTelegram }: TelegramLoginProps) => 
         <div className="text-center text-xs text-muted-foreground pt-4 border-t">
           Ваши данные надежно хранятся и защищены
         </div>
+        <script>{`
+          (function(){
+            if (typeof window !== 'undefined') {
+              window.addEventListener('tg-oauth', (e) => {
+                try { const payload = (e as CustomEvent).detail; onOAuth(payload); } catch {}
+              });
+            }
+          })();
+        `}</script>
       </Card>
     </div>
   );
