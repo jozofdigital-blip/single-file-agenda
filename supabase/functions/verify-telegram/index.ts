@@ -125,7 +125,7 @@ async function ensureUserAndSession(
 
   let userId: string;
 
-  if (existingProfile) {
+  if (existingProfile?.id) {
     userId = existingProfile.id as string;
     const { error: updateError } = await supabase
       .from("profiles")
@@ -153,37 +153,6 @@ async function ensureUserAndSession(
     if (authError || !authData?.user) {
       throw new Error("Failed to create user");
     }
-  }
-
-  return normalized;
-}
-
-interface TelegramUserPayload {
-  id: string;
-  username?: string;
-  first_name?: string;
-  last_name?: string;
-}
-
-async function ensureUserAndSession(
-  supabase: ReturnType<typeof createClient>,
-  telegramUser: TelegramUserPayload,
-  botToken: string,
-) {
-  const telegramId = telegramUser.id;
-  const email = `tg_${telegramId}@telegram.local`;
-  const password = await sha256Hex(`${telegramId}_${botToken}`);
-
-  const profileUpdate: Record<string, unknown> = { telegram_id: telegramId };
-  if (telegramUser.username !== undefined) profileUpdate.username = telegramUser.username;
-  if (telegramUser.first_name !== undefined) profileUpdate.first_name = telegramUser.first_name;
-  if (telegramUser.last_name !== undefined) profileUpdate.last_name = telegramUser.last_name;
-
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("telegram_id", telegramId)
-    .maybeSingle();
 
     userId = authData.user.id;
 
@@ -246,13 +215,13 @@ serve(async (req) => {
 
     let telegramUser: TelegramUserPayload | null = null;
 
-    if (type === "widget" || type === "webapp") {
+    if (type === "widget" || type === "webapp" || type === "login_url") {
       const secretKey = await sha256Hex(botToken);
       let dataForCheck: Record<string, unknown>;
 
       if (type === "widget") {
         dataForCheck = payload as Record<string, unknown>;
-      } else {
+      } else if (type === "webapp") {
         if (!initData || typeof initData !== "string") {
           return new Response(JSON.stringify({ error: "initData is required for webapp" }), {
             status: 400,
@@ -260,6 +229,14 @@ serve(async (req) => {
           });
         }
         dataForCheck = parseQueryString(initData);
+      } else {
+        if (!payload || typeof payload !== "object") {
+          return new Response(JSON.stringify({ error: "payload is required for login_url" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        dataForCheck = payload as Record<string, unknown>;
       }
 
       const rawHash = dataForCheck["hash"];
@@ -285,19 +262,22 @@ serve(async (req) => {
         });
       }
 
-      if (type === "widget") {
-        const user = payload as Record<string, unknown> | undefined;
-        if (!user || user.id === undefined) {
+      if (type === "widget" || type === "login_url") {
+        const user = dataForCheck["user"] && typeof dataForCheck["user"] === "string"
+          ? JSON.parse(String(dataForCheck["user"]))
+          : payload;
+        const record = (user ?? payload) as Record<string, unknown> | undefined;
+        if (!record || record.id === undefined) {
           return new Response(JSON.stringify({ error: "No user data in Telegram response" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         telegramUser = {
-          id: String(user.id),
-          username: typeof user.username === "string" ? user.username : undefined,
-          first_name: typeof user.first_name === "string" ? user.first_name : undefined,
-          last_name: typeof user.last_name === "string" ? user.last_name : undefined,
+          id: String(record.id),
+          username: typeof record.username === "string" ? record.username : undefined,
+          first_name: typeof record.first_name === "string" ? record.first_name : undefined,
+          last_name: typeof record.last_name === "string" ? record.last_name : undefined,
         };
       } else {
         const parsed = dataForCheck as Record<string, string>;
