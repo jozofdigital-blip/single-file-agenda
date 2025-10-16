@@ -117,84 +117,67 @@ async function ensureUserAndSession(
   if (telegramUser.first_name !== undefined) profileUpdate.first_name = telegramUser.first_name;
   if (telegramUser.last_name !== undefined) profileUpdate.last_name = telegramUser.last_name;
 
+  const metadataUpdate = {
+    telegram_id: telegramId,
+    ...(telegramUser.username !== undefined ? { username: telegramUser.username } : {}),
+    ...(telegramUser.first_name !== undefined ? { first_name: telegramUser.first_name } : {}),
+    ...(telegramUser.last_name !== undefined ? { last_name: telegramUser.last_name } : {}),
+  };
+
   const { data: existingProfile } = await supabase
     .from("profiles")
     .select("id")
     .eq("telegram_id", telegramId)
     .maybeSingle();
 
-  let userId: string;
+  let userId: string | null = existingProfile?.id ? String(existingProfile.id) : null;
+  let existingUserMetadata: Record<string, unknown> | null = null;
 
-  if (existingProfile) {
-    userId = existingProfile.id as string;
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update(profileUpdate)
-      .eq("id", userId);
-
-    if (updateError) {
-      console.error("[TG] Failed to update profile:", updateError);
+  if (!userId) {
+    const { data: existingUser, error: existingUserError } = await supabase.auth.admin.getUserByEmail(email);
+    if (existingUserError) {
+      console.error("[TG] Failed to check existing user by email:", existingUserError);
     }
-  } else {
-    const userMetadata = {
-      telegram_id: telegramId,
-      ...(telegramUser.username !== undefined ? { username: telegramUser.username } : {}),
-      ...(telegramUser.first_name !== undefined ? { first_name: telegramUser.first_name } : {}),
-      ...(telegramUser.last_name !== undefined ? { last_name: telegramUser.last_name } : {}),
-    };
+    if (existingUser?.user) {
+      userId = existingUser.user.id;
+      existingUserMetadata = existingUser.user.user_metadata ?? null;
+    }
+  }
 
+  if (!userId) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: userMetadata,
+      user_metadata: metadataUpdate,
     });
 
     if (authError || !authData?.user) {
-      throw new Error("Failed to create user");
+      const message = authError?.message ?? "Failed to create user";
+      console.error("[TG] Failed to create user:", authError);
+      throw new Error(message);
+    }
+
+    userId = authData.user.id;
+    existingUserMetadata = authData.user.user_metadata ?? null;
+  } else {
+    const mergedMetadata = { ...(existingUserMetadata ?? {}), ...metadataUpdate };
+    const { error: updateUserError } = await supabase.auth.admin.updateUserById(userId, {
+      password,
+      user_metadata: mergedMetadata,
+    });
+    if (updateUserError) {
+      console.error("[TG] Failed to update existing user metadata:", updateUserError);
     }
   }
 
-  return normalized;
-}
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: userId,
+    ...profileUpdate,
+  });
 
-interface TelegramUserPayload {
-  id: string;
-  username?: string;
-  first_name?: string;
-  last_name?: string;
-}
-
-async function ensureUserAndSession(
-  supabase: ReturnType<typeof createClient>,
-  telegramUser: TelegramUserPayload,
-  botToken: string,
-) {
-  const telegramId = telegramUser.id;
-  const email = `tg_${telegramId}@telegram.local`;
-  const password = await sha256Hex(`${telegramId}_${botToken}`);
-
-  const profileUpdate: Record<string, unknown> = { telegram_id: telegramId };
-  if (telegramUser.username !== undefined) profileUpdate.username = telegramUser.username;
-  if (telegramUser.first_name !== undefined) profileUpdate.first_name = telegramUser.first_name;
-  if (telegramUser.last_name !== undefined) profileUpdate.last_name = telegramUser.last_name;
-
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("telegram_id", telegramId)
-    .maybeSingle();
-
-    userId = authData.user.id;
-
-    const { error: profileError } = await supabase.from("profiles").upsert({
-      id: userId,
-      ...profileUpdate,
-    });
-
-    if (profileError) {
-      console.error("[TG] Failed to create profile:", profileError);
-    }
+  if (profileError) {
+    console.error("[TG] Failed to upsert profile:", profileError);
   }
 
   const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
@@ -203,7 +186,8 @@ async function ensureUserAndSession(
   });
 
   if (sessionError || !sessionData?.session) {
-    throw new Error("Failed to create session");
+    console.error("[TG] Failed to create session:", sessionError);
+    throw new Error(sessionError?.message ?? "Failed to create session");
   }
 
   return {
@@ -246,13 +230,13 @@ serve(async (req) => {
 
     let telegramUser: TelegramUserPayload | null = null;
 
-    if (type === "widget" || type === "webapp") {
+    if (type === "widget" || type === "webapp" || type === "login_url") {
       const secretKey = await sha256Hex(botToken);
       let dataForCheck: Record<string, unknown>;
 
       if (type === "widget") {
         dataForCheck = payload as Record<string, unknown>;
-      } else {
+      } else if (type === "webapp") {
         if (!initData || typeof initData !== "string") {
           return new Response(JSON.stringify({ error: "initData is required for webapp" }), {
             status: 400,
@@ -260,6 +244,14 @@ serve(async (req) => {
           });
         }
         dataForCheck = parseQueryString(initData);
+      } else {
+        if (!payload || typeof payload !== "object") {
+          return new Response(JSON.stringify({ error: "payload is required for login_url" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        dataForCheck = payload as Record<string, unknown>;
       }
 
       const rawHash = dataForCheck["hash"];
@@ -285,19 +277,22 @@ serve(async (req) => {
         });
       }
 
-      if (type === "widget") {
-        const user = payload as Record<string, unknown> | undefined;
-        if (!user || user.id === undefined) {
+      if (type === "widget" || type === "login_url") {
+        const user = dataForCheck["user"] && typeof dataForCheck["user"] === "string"
+          ? JSON.parse(String(dataForCheck["user"]))
+          : payload;
+        const record = (user ?? payload) as Record<string, unknown> | undefined;
+        if (!record || record.id === undefined) {
           return new Response(JSON.stringify({ error: "No user data in Telegram response" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         telegramUser = {
-          id: String(user.id),
-          username: typeof user.username === "string" ? user.username : undefined,
-          first_name: typeof user.first_name === "string" ? user.first_name : undefined,
-          last_name: typeof user.last_name === "string" ? user.last_name : undefined,
+          id: String(record.id),
+          username: typeof record.username === "string" ? record.username : undefined,
+          first_name: typeof record.first_name === "string" ? record.first_name : undefined,
+          last_name: typeof record.last_name === "string" ? record.last_name : undefined,
         };
       } else {
         const parsed = dataForCheck as Record<string, string>;
