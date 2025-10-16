@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
+const BOT_USERNAME = (import.meta as any).env?.VITE_TELEGRAM_BOT_USERNAME || "my_helpday_bot";
+
 interface TelegramLoginProps {
   onLogin: () => void;
   onOAuth: (payload: any) => void;
@@ -32,11 +34,12 @@ export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram, variant = "full"
         scriptEl.async = true;
         scriptEl.src = "https://telegram.org/js/telegram-widget.js?22";
         scriptEl.setAttribute("data-loaded", "true");
-        scriptEl.setAttribute("data-telegram-login", "my_helpday_bot");
+        scriptEl.setAttribute("data-telegram-login", BOT_USERNAME);
         scriptEl.setAttribute("data-size", "large");
         scriptEl.setAttribute("data-userpic", "false");
         scriptEl.setAttribute("data-request-access", "write");
         scriptEl.setAttribute("data-onauth", "onTelegramAuth");
+        console.log("[TG Widget] Injected for bot:", BOT_USERNAME);
         container.appendChild(scriptEl);
       }
     }
