@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -8,6 +9,16 @@ interface TelegramLoginProps {
 }
 
 export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram }: TelegramLoginProps) => {
+  useEffect(() => {
+    const handler = (e: Event) => {
+      try {
+        const payload = (e as CustomEvent).detail;
+        onOAuth(payload);
+      } catch {}
+    };
+    window.addEventListener('tg-oauth', handler as EventListener);
+    return () => window.removeEventListener('tg-oauth', handler as EventListener);
+  }, [onOAuth]);
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-secondary/20 p-4">
       <Card className="w-full max-w-md p-8 space-y-6">
@@ -73,15 +84,6 @@ export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram }: TelegramLoginP
         <div className="text-center text-xs text-muted-foreground pt-4 border-t">
           Ваши данные надежно хранятся и защищены
         </div>
-        <script>{`
-          (function(){
-            if (typeof window !== 'undefined') {
-              window.addEventListener('tg-oauth', (e) => {
-                try { const payload = (e as CustomEvent).detail; onOAuth(payload); } catch {}
-              });
-            }
-          })();
-        `}</script>
       </Card>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 export interface Task {
   id: string;
@@ -100,9 +101,11 @@ export const useTasks = (userId: string | undefined) => {
           originalDate: data.original_date || undefined,
         };
         setTasks((prev) => [...prev, newTask]);
+        try { toast.success("Задача добавлена"); } catch {}
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding task:", error);
+      try { toast.error(`Не удалось добавить задачу: ${error?.message || ""}`); } catch {}
     }
   };
 
