@@ -262,7 +262,8 @@ export const useTelegramAuth = () => {
 
       const result = await applyVerifyResponse(verifyResp ?? null, supabase);
       if (!result.ok) {
-        console.error('[TG AUTH] token flow failed to apply session:', result.error);
+        const errorMessage = 'error' in result ? result.error : 'Не удалось применить сессию';
+        console.error('[TG AUTH] token flow failed to apply session:', errorMessage);
       }
 
       return result;
@@ -291,7 +292,8 @@ export const useTelegramAuth = () => {
 
       const result = await applyVerifyResponse(verifyResp ?? null, supabase);
       if (!result.ok) {
-        console.error('[TG AUTH] login_url session application failed:', result.error);
+        const errorMessage = 'error' in result ? result.error : 'Не удалось применить сессию';
+        console.error('[TG AUTH] login_url session application failed:', errorMessage);
       }
 
       return result;

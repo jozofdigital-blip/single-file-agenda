@@ -59,12 +59,11 @@ const Index = () => {
         onUpdateTask={handleUpdateTask}
       />
       {!user ? (
-        <TelegramLogin
-          variant="inline"
-          onLogin={signInWithTelegram}
-          onOAuth={linkTelegramFromBrowser}
-          isInTelegram={isInTelegram}
-        />
+      <TelegramLogin
+        variant="inline"
+        onLogin={signInWithTelegram}
+        isInTelegram={isInTelegram}
+      />
       ) : !profileReady ? (
         <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 sm:px-6 sm:py-4">
           <div className="md:mx-auto md:max-w-2xl text-sm text-muted-foreground">Подготовка профиля...</div>

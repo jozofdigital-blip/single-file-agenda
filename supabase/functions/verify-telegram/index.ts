@@ -86,8 +86,19 @@ async function verifyJwtHS256(token: string, secret: string): Promise<Record<str
   );
 
   const signedContent = encoder.encode(`${headerB64}.${payloadB64}`);
-  const signature = base64UrlToUint8Array(signatureB64);
-  const valid = await crypto.subtle.verify("HMAC", key, signature, signedContent);
+  const signatureBytes = base64UrlToUint8Array(signatureB64);
+  
+  // Convert Uint8Array to ArrayBuffer for crypto.subtle.verify
+  const signatureBuffer = signatureBytes.buffer.slice(
+    signatureBytes.byteOffset,
+    signatureBytes.byteOffset + signatureBytes.byteLength
+  ) as ArrayBuffer;
+  const contentBuffer = signedContent.buffer.slice(
+    signedContent.byteOffset,
+    signedContent.byteOffset + signedContent.byteLength
+  ) as ArrayBuffer;
+  
+  const valid = await crypto.subtle.verify("HMAC", key, signatureBuffer, contentBuffer);
 
   if (!valid) {
     throw new Error("Invalid JWT signature");
@@ -104,7 +115,7 @@ interface TelegramUserPayload {
 }
 
 async function ensureUserAndSession(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   telegramUser: TelegramUserPayload,
   botToken: string,
 ) {
@@ -128,24 +139,20 @@ async function ensureUserAndSession(
     .from("profiles")
     .select("id")
     .eq("telegram_id", telegramId)
-    .maybeSingle();
+    .maybeSingle() as { data: { id: string } | null };
 
-  let userId: string | null = existingProfile?.id ? String(existingProfile.id) : null;
+  let userId: string | null = null;
   let existingUserMetadata: Record<string, unknown> | null = null;
 
   if (existingProfile?.id) {
-    userId = existingProfile.id as string;
+    userId = existingProfile.id;
     const { error: updateError } = await supabase
       .from("profiles")
-      .update(profileUpdate)
+      .update(profileUpdate as any)
       .eq("id", userId);
 
     if (updateError) {
       console.error("[TG] Failed to update profile:", updateError);
-    }
-    if (existingUser?.user) {
-      userId = existingUser.user.id;
-      existingUserMetadata = existingUser.user.user_metadata ?? null;
     }
   }
 
@@ -179,7 +186,7 @@ async function ensureUserAndSession(
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: userId,
     ...profileUpdate,
-  });
+  } as any);
 
   if (profileError) {
     console.error("[TG] Failed to upsert profile:", profileError);

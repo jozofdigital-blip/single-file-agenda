@@ -1,29 +1,18 @@
-import { useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
 type ImportMetaEnv = { env?: Record<string, string | undefined> };
-type TelegramWidgetPayload = {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  auth_date?: number;
-  hash: string;
-};
 
 const RAW_BOT = (import.meta as unknown as ImportMetaEnv).env?.VITE_TELEGRAM_BOT_USERNAME ?? "my_helpday_bot";
 const BOT_USERNAME = String(RAW_BOT).replace(/^@/, "");
 
 interface TelegramLoginProps {
   onLogin: () => void;
-  onOAuth: (payload: TelegramWidgetPayload) => void;
   isInTelegram: boolean;
   variant?: "full" | "inline";
 }
 
-export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram, variant = "full" }: TelegramLoginProps) => {
+export const TelegramLogin = ({ onLogin, isInTelegram, variant = "full" }: TelegramLoginProps) => {
   const loginUrl = `https://t.me/${BOT_USERNAME}?start=login`;
 
   const handleLoginClick = () => {
@@ -37,61 +26,18 @@ export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram, variant = "full"
     }
   };
 
-  useEffect(() => {
-    const handler = (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const payload = event.detail as TelegramWidgetPayload;
-      onOAuth(payload);
-    };
-    window.addEventListener("tg-oauth", handler as EventListener);
-
-    // Load Telegram Login Widget for browser (not WebApp)
-    let scriptEl: HTMLScriptElement | null = null;
-    if (!isInTelegram) {
-      window.onTelegramAuth = function (user: TelegramWidgetPayload) {
-        window.dispatchEvent(new CustomEvent("tg-oauth", { detail: user }));
-      };
-
-      const container = document.getElementById("tg-login-widget");
-      if (container && !container.querySelector('script[data-loaded="true"]')) {
-        scriptEl = document.createElement("script");
-        scriptEl.async = true;
-        scriptEl.src = "https://telegram.org/js/telegram-widget.js?22";
-        scriptEl.setAttribute("data-loaded", "true");
-        scriptEl.setAttribute("data-telegram-login", BOT_USERNAME);
-        scriptEl.setAttribute("data-size", "large");
-        scriptEl.setAttribute("data-userpic", "false");
-        scriptEl.setAttribute("data-request-access", "write");
-        scriptEl.setAttribute("data-onauth", "onTelegramAuth");
-        console.log("[TG Widget] Injected for bot:", BOT_USERNAME);
-        container.appendChild(scriptEl);
-      }
-    }
-
-    return () => {
-      window.removeEventListener("tg-oauth", handler as EventListener);
-      if (scriptEl && scriptEl.parentNode) {
-        scriptEl.parentNode.removeChild(scriptEl);
-      }
-      window.onTelegramAuth = undefined;
-    };
-  }, [onOAuth, isInTelegram]);
 
   if (variant === "inline") {
     return (
       <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex w-full items-center justify-between gap-3 md:mx-auto md:max-w-2xl">
           <div className="flex-1 min-w-0">
-            {isInTelegram ? (
-              <p className="text-sm text-muted-foreground">Войдите через Telegram, чтобы добавлять задачи</p>
-            ) : (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Нажмите кнопку — откроется Telegram-бот. После получения ссылки вернитесь сюда.
-                </p>
-                <div id="tg-login-widget" className="flex justify-start" />
-              </div>
-            )}
+            <p className="text-sm text-muted-foreground">
+              {isInTelegram 
+                ? "Войдите через Telegram, чтобы добавлять задачи"
+                : "Нажмите кнопку — откроется Telegram-бот. После получения ссылки вернитесь сюда."
+              }
+            </p>
           </div>
           <Button onClick={handleLoginClick} className="h-10 shrink-0 bg-gradient-to-br from-primary to-[hsl(250_70%_60%)] hover:shadow-hover transition-all duration-300">
             Войти через Telegram
@@ -112,14 +58,14 @@ export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram, variant = "full"
         </div>
 
         <div className="space-y-4">
-          {isInTelegram ? (
-            <p className="text-center text-sm text-muted-foreground">Нажмите кнопку ниже, чтобы войти через Telegram</p>
-          ) : (
-            <div className="bg-secondary/50 rounded-lg p-4 mb-2 space-y-2">
-              <p className="text-sm text-muted-foreground">
-                После нажатия кнопки откроется Telegram-бот. Нажмите «Start» и переходите по ссылке, которую он пришлёт.
-              </p>
-              <div id="tg-login-widget" className="flex justify-center" />
+          <div className="bg-secondary/50 rounded-lg p-4 mb-2 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {isInTelegram
+                ? "Нажмите кнопку ниже, чтобы войти через Telegram"
+                : "После нажатия кнопки откроется Telegram-бот. Нажмите «Start» и переходите по ссылке, которую он пришлёт."
+              }
+            </p>
+            {!isInTelegram && (
               <a
                 href={loginUrl}
                 target="_blank"
@@ -128,8 +74,8 @@ export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram, variant = "full"
               >
                 Открыть бота вручную
               </a>
-            </div>
-          )}
+            )}
+          </div>
           <Button onClick={handleLoginClick} className="w-full h-12 bg-gradient-to-br from-primary to-[hsl(250_70%_60%)] hover:shadow-hover transition-all duration-300">
             {isInTelegram ? (
               <>
@@ -152,8 +98,3 @@ export const TelegramLogin = ({ onLogin, onOAuth, isInTelegram, variant = "full"
   );
 };
 
-declare global {
-  interface Window {
-    onTelegramAuth?: (user: TelegramWidgetPayload) => void;
-  }
-}

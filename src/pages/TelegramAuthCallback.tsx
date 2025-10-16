@@ -40,7 +40,8 @@ export const TelegramAuthCallback = () => {
         }, 1200);
       } else {
         setStatus("error");
-        setMessage(result.error ?? "Не удалось подтвердить токен");
+        const errorMessage = 'error' in result ? result.error : "Не удалось подтвердить токен";
+        setMessage(errorMessage);
       }
     };
 
