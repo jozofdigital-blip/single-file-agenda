@@ -25,27 +25,6 @@
     />
 
     <script>
-      (function ensureTrailingSlash() {
-        try {
-          var location = window.location;
-          var pathname = location.pathname || "";
-          if (!pathname) return;
-
-          var lastSegment = pathname.split("/").pop() || "";
-          var looksLikeFile = lastSegment.includes(".");
-          var hasTrailingSlash = pathname.endsWith("/");
-
-          if (!hasTrailingSlash && !looksLikeFile) {
-            var next = pathname + "/" + (location.search || "") + (location.hash || "");
-            location.replace(next);
-          }
-        } catch (error) {
-          console.warn("[INDEX] Failed to normalize trailing slash", error);
-        }
-      })();
-    </script>
-
-    <script>
       (function(){
         function show(msg){
           var el = document.getElementById('runtime-error');

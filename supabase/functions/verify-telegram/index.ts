@@ -96,66 +96,6 @@ async function verifyJwtHS256(token: string, secret: string): Promise<Record<str
   return decodeJwtPart(payloadB64);
 }
 
-function tryParseObjectString(raw: unknown): Record<string, unknown> | null {
-  if (typeof raw !== "string") return null;
-  const attempts = [raw];
-  try {
-    const decoded = decodeURIComponent(raw);
-    if (decoded !== raw) {
-      attempts.push(decoded);
-    }
-  } catch (_error) {
-    // ignore decodeURIComponent failures
-  }
-
-  for (const attempt of attempts) {
-    try {
-      const parsed = JSON.parse(attempt);
-      if (parsed && typeof parsed === "object") {
-        return parsed as Record<string, unknown>;
-      }
-    } catch (_error) {
-      continue;
-    }
-  }
-
-  return null;
-}
-
-function normalizeLoginPayload(payload: unknown): Record<string, unknown> {
-  if (!payload || typeof payload !== "object") {
-    throw new Error("Login payload must be an object");
-  }
-
-  const source = payload as Record<string, unknown>;
-  const normalized: Record<string, unknown> = { ...source };
-
-  const rawAuthResult = typeof normalized["tgAuthResult"] === "string"
-    ? normalized["tgAuthResult"] as string
-    : typeof normalized["tg_auth_result"] === "string"
-      ? normalized["tg_auth_result"] as string
-      : null;
-
-  if (rawAuthResult) {
-    const parsedAuth = tryParseObjectString(rawAuthResult);
-    if (parsedAuth) {
-      Object.assign(normalized, parsedAuth);
-    }
-  }
-
-  delete normalized["tgAuthResult"];
-  delete normalized["tg_auth_result"];
-
-  if (typeof normalized["user"] === "string") {
-    const parsedUser = tryParseObjectString(normalized["user"]);
-    if (parsedUser) {
-      normalized["user"] = parsedUser;
-    }
-  }
-
-  return normalized;
-}
-
 interface TelegramUserPayload {
   id: string;
   username?: string;
@@ -213,6 +153,37 @@ async function ensureUserAndSession(
     if (authError || !authData?.user) {
       throw new Error("Failed to create user");
     }
+  }
+
+  return normalized;
+}
+
+interface TelegramUserPayload {
+  id: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+async function ensureUserAndSession(
+  supabase: ReturnType<typeof createClient>,
+  telegramUser: TelegramUserPayload,
+  botToken: string,
+) {
+  const telegramId = telegramUser.id;
+  const email = `tg_${telegramId}@telegram.local`;
+  const password = await sha256Hex(`${telegramId}_${botToken}`);
+
+  const profileUpdate: Record<string, unknown> = { telegram_id: telegramId };
+  if (telegramUser.username !== undefined) profileUpdate.username = telegramUser.username;
+  if (telegramUser.first_name !== undefined) profileUpdate.first_name = telegramUser.first_name;
+  if (telegramUser.last_name !== undefined) profileUpdate.last_name = telegramUser.last_name;
+
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("telegram_id", telegramId)
+    .maybeSingle();
 
     userId = authData.user.id;
 
@@ -275,11 +246,13 @@ serve(async (req) => {
 
     let telegramUser: TelegramUserPayload | null = null;
 
-    if (type === "widget" || type === "webapp" || type === "login_url") {
+    if (type === "widget" || type === "webapp") {
       const secretKey = await sha256Hex(botToken);
       let dataForCheck: Record<string, unknown>;
 
-      if (type === "webapp") {
+      if (type === "widget") {
+        dataForCheck = payload as Record<string, unknown>;
+      } else {
         if (!initData || typeof initData !== "string") {
           return new Response(JSON.stringify({ error: "initData is required for webapp" }), {
             status: 400,
@@ -287,14 +260,6 @@ serve(async (req) => {
           });
         }
         dataForCheck = parseQueryString(initData);
-      } else {
-        if (!payload || typeof payload !== "object") {
-          return new Response(JSON.stringify({ error: "payload is required" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        dataForCheck = normalizeLoginPayload(payload);
       }
 
       const rawHash = dataForCheck["hash"];
@@ -320,7 +285,21 @@ serve(async (req) => {
         });
       }
 
-      if (type === "webapp") {
+      if (type === "widget") {
+        const user = payload as Record<string, unknown> | undefined;
+        if (!user || user.id === undefined) {
+          return new Response(JSON.stringify({ error: "No user data in Telegram response" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        telegramUser = {
+          id: String(user.id),
+          username: typeof user.username === "string" ? user.username : undefined,
+          first_name: typeof user.first_name === "string" ? user.first_name : undefined,
+          last_name: typeof user.last_name === "string" ? user.last_name : undefined,
+        };
+      } else {
         const parsed = dataForCheck as Record<string, string>;
         let parsedUser: Record<string, unknown> | null = null;
         try {
@@ -341,37 +320,6 @@ serve(async (req) => {
           username: typeof parsedUser.username === "string" ? parsedUser.username : undefined,
           first_name: typeof parsedUser.first_name === "string" ? parsedUser.first_name : undefined,
           last_name: typeof parsedUser.last_name === "string" ? parsedUser.last_name : undefined,
-        };
-      } else {
-        const userSource = typeof dataForCheck.user === "object" && dataForCheck.user !== null
-          ? dataForCheck.user as Record<string, unknown>
-          : dataForCheck;
-
-        const idCandidate = userSource.id ?? dataForCheck.id;
-        if (idCandidate === undefined) {
-          return new Response(JSON.stringify({ error: "No user data in Telegram response" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        telegramUser = {
-          id: String(idCandidate),
-          username: typeof userSource.username === "string"
-            ? userSource.username
-            : typeof dataForCheck.username === "string"
-              ? dataForCheck.username as string
-              : undefined,
-          first_name: typeof userSource.first_name === "string"
-            ? userSource.first_name
-            : typeof dataForCheck.first_name === "string"
-              ? dataForCheck.first_name as string
-              : undefined,
-          last_name: typeof userSource.last_name === "string"
-            ? userSource.last_name
-            : typeof dataForCheck.last_name === "string"
-              ? dataForCheck.last_name as string
-              : undefined,
         };
       }
     } else if (type === "token") {

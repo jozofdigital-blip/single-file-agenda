@@ -102,12 +102,14 @@ export const useTelegramAuth = () => {
       setProfileReady(false);
       const supabase = await getSupabase();
 
+      // Check if profile exists first
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('telegram_id')
         .eq('id', userId)
         .maybeSingle();
 
+      // Build update payload - only include telegram fields if tgUser is provided
       const payload: {
         id: string;
         telegram_id?: number;
@@ -115,7 +117,6 @@ export const useTelegramAuth = () => {
         first_name?: string;
         last_name?: string;
       } = { id: userId };
-
       if (tgUser) {
         const numericId = typeof tgUser.id === 'number' ? tgUser.id : Number(tgUser.id);
         if (!Number.isNaN(numericId)) {
@@ -198,7 +199,7 @@ export const useTelegramAuth = () => {
 
       const initData = tg.initDataUnsafe;
       const initDataString = tg.initData;
-      console.log('[TG AUTH] initDataUnsafe.user exists:', Boolean(initData?.user), 'initData length:', initDataString?.length || 0);
+      console.log("[TG AUTH] initDataUnsafe.user exists:", Boolean(initData?.user), "initData length:", initDataString?.length || 0);
 
       if (!initDataString) {
         console.error('[TG AUTH] No initData available');
@@ -218,9 +219,26 @@ export const useTelegramAuth = () => {
 
       console.log('[TG AUTH] verify-telegram response:', { ok: verifyResp.ok, hasSession: !!verifyResp.session });
 
-      const result = await applyVerifyResponse(verifyResp ?? null, supabase, initData?.user ?? null);
-      if (!result.ok) {
-        console.error('[TG AUTH] Session application failed', result.error);
+      if (verifyResp.session) {
+        // Set session from backend
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: verifyResp.session.access_token,
+          refresh_token: verifyResp.session.refresh_token,
+        });
+
+        if (sessionError) {
+          console.error('[TG AUTH] setSession error:', sessionError);
+          return;
+        }
+
+        const sessionUserId = verifyResp.session.user?.id;
+        if (sessionUserId) {
+          await ensureProfile(sessionUserId, initData?.user ?? null);
+        }
+
+        console.log('[TG AUTH] Session set successfully');
+      } else {
+        console.error('[TG AUTH] No session in response');
       }
     } catch (error) {
       console.error('[TG AUTH] signInWithTelegram error:', error);
@@ -279,6 +297,50 @@ export const useTelegramAuth = () => {
       return result;
     } catch (e) {
       console.error('[TG AUTH] completeLoginWithLoginPayload error:', e);
+      return { ok: false, error: e instanceof Error ? e.message : 'Неизвестная ошибка' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completeLoginWithToken = async (token: string) => {
+    try {
+      const supabase = await getSupabase();
+      setLoading(true);
+
+      const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke('verify-telegram', {
+        body: { type: 'token', token },
+      });
+
+      if (verifyErr) {
+        console.error('[TG AUTH] token verify error:', verifyErr);
+        return { ok: false, error: verifyErr.message ?? 'Не удалось проверить токен' };
+      }
+
+      if (!verifyResp?.ok || !verifyResp.session) {
+        console.error('[TG AUTH] token verify failed:', verifyResp);
+        return { ok: false, error: verifyResp?.error ?? 'Неверный токен входа' };
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: verifyResp.session.access_token,
+        refresh_token: verifyResp.session.refresh_token,
+      });
+
+      if (sessionError) {
+        console.error('[TG AUTH] setSession error (token flow):', sessionError);
+        return { ok: false, error: sessionError.message };
+      }
+
+      const sessionUserId = verifyResp.session.user?.id;
+      if (sessionUserId) {
+        await ensureProfile(sessionUserId, verifyResp.user ?? null);
+      }
+
+      console.log('[TG AUTH] Session set via token successfully');
+      return { ok: true };
+    } catch (e) {
+      console.error('[TG AUTH] completeLoginWithToken error:', e);
       return { ok: false, error: e instanceof Error ? e.message : 'Неизвестная ошибка' };
     } finally {
       setLoading(false);
@@ -351,25 +413,33 @@ export const useTelegramAuth = () => {
 
       console.log('[TG AUTH] widget verify response:', { ok: verifyResp?.ok, hasSession: !!verifyResp?.session });
 
-      const result = await applyVerifyResponse(verifyResp ?? null, supabase, payload);
-      if (!result.ok) {
-        console.error('[TG AUTH] widget verify failed:', result.error);
+      if (verifyResp.session) {
+        // Set session from backend
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: verifyResp.session.access_token,
+          refresh_token: verifyResp.session.refresh_token,
+        });
+
+        if (sessionError) {
+          console.error('[TG AUTH] setSession error:', sessionError);
+          return;
+        }
+
+        console.log('[TG AUTH] Browser session set successfully');
+
+        const sessionUserId = verifyResp.session.user?.id;
+        if (sessionUserId) {
+          await ensureProfile(sessionUserId, verifyResp.user ?? null);
+        }
+      } else {
+        console.error('[TG AUTH] No session in widget response');
       }
     } catch (e) {
       console.error('[TG AUTH] linkTelegramFromBrowser error', e);
     }
   };
 
-  return {
-    user,
-    session,
-    loading,
-    profileReady,
-    signInWithTelegram,
-    linkTelegramFromBrowser,
-    completeLoginWithToken,
-    completeLoginWithLoginPayload,
-  };
+  return { user, session, loading, profileReady, signInWithTelegram, linkTelegramFromBrowser, completeLoginWithToken };
 };
 
 declare global {
