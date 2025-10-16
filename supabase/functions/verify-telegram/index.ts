@@ -153,6 +153,37 @@ async function ensureUserAndSession(
     if (authError || !authData?.user) {
       throw new Error("Failed to create user");
     }
+  }
+
+  return normalized;
+}
+
+interface TelegramUserPayload {
+  id: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+async function ensureUserAndSession(
+  supabase: ReturnType<typeof createClient>,
+  telegramUser: TelegramUserPayload,
+  botToken: string,
+) {
+  const telegramId = telegramUser.id;
+  const email = `tg_${telegramId}@telegram.local`;
+  const password = await sha256Hex(`${telegramId}_${botToken}`);
+
+  const profileUpdate: Record<string, unknown> = { telegram_id: telegramId };
+  if (telegramUser.username !== undefined) profileUpdate.username = telegramUser.username;
+  if (telegramUser.first_name !== undefined) profileUpdate.first_name = telegramUser.first_name;
+  if (telegramUser.last_name !== undefined) profileUpdate.last_name = telegramUser.last_name;
+
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("telegram_id", telegramId)
+    .maybeSingle();
 
     userId = authData.user.id;
 
