@@ -27,6 +27,7 @@ export const useTasks = (userId: string | undefined) => {
     if (!userId) return;
 
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
@@ -54,6 +55,7 @@ export const useTasks = (userId: string | undefined) => {
     if (!userId) return;
 
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from("archived_tasks")
         .select("*")
