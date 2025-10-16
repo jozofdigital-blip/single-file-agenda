@@ -117,13 +117,21 @@ async function ensureUserAndSession(
   if (telegramUser.first_name !== undefined) profileUpdate.first_name = telegramUser.first_name;
   if (telegramUser.last_name !== undefined) profileUpdate.last_name = telegramUser.last_name;
 
+  const metadataUpdate = {
+    telegram_id: telegramId,
+    ...(telegramUser.username !== undefined ? { username: telegramUser.username } : {}),
+    ...(telegramUser.first_name !== undefined ? { first_name: telegramUser.first_name } : {}),
+    ...(telegramUser.last_name !== undefined ? { last_name: telegramUser.last_name } : {}),
+  };
+
   const { data: existingProfile } = await supabase
     .from("profiles")
     .select("id")
     .eq("telegram_id", telegramId)
     .maybeSingle();
 
-  let userId: string;
+  let userId: string | null = existingProfile?.id ? String(existingProfile.id) : null;
+  let existingUserMetadata: Record<string, unknown> | null = null;
 
   if (existingProfile?.id) {
     userId = existingProfile.id as string;
@@ -135,35 +143,46 @@ async function ensureUserAndSession(
     if (updateError) {
       console.error("[TG] Failed to update profile:", updateError);
     }
-  } else {
-    const userMetadata = {
-      telegram_id: telegramId,
-      ...(telegramUser.username !== undefined ? { username: telegramUser.username } : {}),
-      ...(telegramUser.first_name !== undefined ? { first_name: telegramUser.first_name } : {}),
-      ...(telegramUser.last_name !== undefined ? { last_name: telegramUser.last_name } : {}),
-    };
+    if (existingUser?.user) {
+      userId = existingUser.user.id;
+      existingUserMetadata = existingUser.user.user_metadata ?? null;
+    }
+  }
 
+  if (!userId) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: userMetadata,
+      user_metadata: metadataUpdate,
     });
 
     if (authError || !authData?.user) {
-      throw new Error("Failed to create user");
+      const message = authError?.message ?? "Failed to create user";
+      console.error("[TG] Failed to create user:", authError);
+      throw new Error(message);
     }
 
     userId = authData.user.id;
-
-    const { error: profileError } = await supabase.from("profiles").upsert({
-      id: userId,
-      ...profileUpdate,
+    existingUserMetadata = authData.user.user_metadata ?? null;
+  } else {
+    const mergedMetadata = { ...(existingUserMetadata ?? {}), ...metadataUpdate };
+    const { error: updateUserError } = await supabase.auth.admin.updateUserById(userId, {
+      password,
+      user_metadata: mergedMetadata,
     });
-
-    if (profileError) {
-      console.error("[TG] Failed to create profile:", profileError);
+    if (updateUserError) {
+      console.error("[TG] Failed to update existing user metadata:", updateUserError);
     }
+  }
+
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: userId,
+    ...profileUpdate,
+  });
+
+  if (profileError) {
+    console.error("[TG] Failed to upsert profile:", profileError);
   }
 
   const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
@@ -172,7 +191,8 @@ async function ensureUserAndSession(
   });
 
   if (sessionError || !sessionData?.session) {
-    throw new Error("Failed to create session");
+    console.error("[TG] Failed to create session:", sessionError);
+    throw new Error(sessionError?.message ?? "Failed to create session");
   }
 
   return {
