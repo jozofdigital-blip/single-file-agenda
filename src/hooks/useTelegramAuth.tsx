@@ -16,17 +16,18 @@ export const useTelegramAuth = () => {
   const [loading, setLoading] = useState(true);
   const [profileReady, setProfileReady] = useState(false);
 
-  const ensureProfile = async (userId: string, tgUser?: TelegramUser) => {
+  const ensureProfile = async (userId: string, tgUser?: TelegramUser | null) => {
     try {
+      setProfileReady(false);
       const supabase = await getSupabase();
-      
+
       // Check if profile exists first
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('telegram_id')
         .eq('id', userId)
         .maybeSingle();
-      
+
       // Build update payload - only include telegram fields if tgUser is provided
       const payload: any = { id: userId };
       if (tgUser) {
@@ -62,7 +63,7 @@ export const useTelegramAuth = () => {
     try {
       const supabase = await getSupabase();
       const isInTelegram = window.Telegram?.WebApp;
-      
+
       if (!isInTelegram) {
         console.log("[TG AUTH] Not in Telegram WebApp");
         return;
@@ -101,12 +102,17 @@ export const useTelegramAuth = () => {
           access_token: verifyResp.session.access_token,
           refresh_token: verifyResp.session.refresh_token,
         });
-        
+
         if (sessionError) {
           console.error('[TG AUTH] setSession error:', sessionError);
           return;
         }
-        
+
+        const sessionUserId = verifyResp.session.user?.id;
+        if (sessionUserId) {
+          await ensureProfile(sessionUserId, initData?.user ?? null);
+        }
+
         console.log('[TG AUTH] Session set successfully');
       } else {
         console.error('[TG AUTH] No session in response');
@@ -193,13 +199,18 @@ export const useTelegramAuth = () => {
           access_token: verifyResp.session.access_token,
           refresh_token: verifyResp.session.refresh_token,
         });
-        
+
         if (sessionError) {
           console.error('[TG AUTH] setSession error:', sessionError);
           return;
         }
-        
+
         console.log('[TG AUTH] Browser session set successfully');
+
+        const sessionUserId = verifyResp.session.user?.id;
+        if (sessionUserId) {
+          await ensureProfile(sessionUserId, verifyResp.user ?? null);
+        }
       } else {
         console.error('[TG AUTH] No session in widget response');
       }
@@ -218,10 +229,10 @@ declare global {
       WebApp: {
         ready: () => void;
         expand: () => void;
-          initDataUnsafe: {
-            user?: TelegramUser;
-          };
-          initData?: string;
+        initDataUnsafe: {
+          user?: TelegramUser;
+        };
+        initData?: string;
       };
     };
   }
