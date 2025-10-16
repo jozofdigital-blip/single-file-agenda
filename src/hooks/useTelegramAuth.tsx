@@ -14,6 +14,29 @@ export const useTelegramAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileReady, setProfileReady] = useState(false);
+
+  const ensureProfile = async (userId: string, tgUser?: TelegramUser) => {
+    try {
+      const payload: any = { id: userId };
+      if (tgUser) {
+        payload.telegram_id = tgUser.id;
+        payload.username = tgUser.username;
+        payload.first_name = tgUser.first_name;
+        payload.last_name = tgUser.last_name;
+      }
+      const { error } = await supabase.from('profiles').upsert(payload);
+      if (error) {
+        console.error('[TG AUTH] ensureProfile upsert error:', error);
+        return false;
+      }
+      setProfileReady(true);
+      return true;
+    } catch (e) {
+      console.error('[TG AUTH] ensureProfile error:', e);
+      return false;
+    }
+  };
 
   const signInWithTelegram = async () => {
     try {
@@ -52,32 +75,13 @@ export const useTelegramAuth = () => {
         
         if (initData?.user) {
           const telegramUser: TelegramUser = initData.user;
-          
-          // Update profile with Telegram data
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .upsert({
-              id: authData.user.id,
-              telegram_id: telegramUser.id,
-              username: telegramUser.username,
-              first_name: telegramUser.first_name,
-              last_name: telegramUser.last_name,
-            });
-            
-          if (profileError) {
-            console.error("[TG AUTH] profile upsert error:", profileError);
-          } else {
-            console.log("[TG AUTH] profile upserted for", telegramUser.username || telegramUser.first_name);
-          }
+          await ensureProfile(authData.user.id, telegramUser);
+        } else {
+          await ensureProfile(authData.user.id);
         }
       } else {
         console.log("[TG AUTH] Not in Telegram WebApp, signed in anonymously");
-        try {
-          await supabase.from("profiles").upsert({ id: authData.user.id });
-          console.log("[TG AUTH] placeholder profile created");
-        } catch (e) {
-          console.error("[TG AUTH] profile upsert (placeholder) error:", e);
-        }
+        await ensureProfile(authData.user.id);
       }
     } catch (error) {
       console.error("[TG AUTH] signInWithTelegram error:", error);
@@ -93,6 +97,13 @@ export const useTelegramAuth = () => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (session?.user) {
+          setTimeout(() => {
+            if (!profileReady) {
+              ensureProfile(session.user.id);
+            }
+          }, 0);
+        }
       }
     );
 
@@ -103,6 +114,7 @@ export const useTelegramAuth = () => {
         
         if (existingSession) {
           console.log("[TG AUTH] Session exists:", existingSession.user.id);
+          await ensureProfile(existingSession.user.id);
           setLoading(false);
           return;
         }
@@ -142,22 +154,13 @@ export const useTelegramAuth = () => {
       }
 
       const u = verifyResp.user || payload;
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: existing.session!.user.id,
-          telegram_id: u.id,
-          username: u.username,
-          first_name: u.first_name,
-          last_name: u.last_name,
-        });
-      if (profileError) console.error('[TG AUTH] profile upsert error', profileError);
+      await ensureProfile(existing.session!.user.id, u);
     } catch (e) {
       console.error('[TG AUTH] linkTelegramFromBrowser error', e);
     }
   };
 
-  return { user, session, loading, signInWithTelegram, linkTelegramFromBrowser };
+  return { user, session, loading, profileReady, signInWithTelegram, linkTelegramFromBrowser };
 };
 
 // Type declaration for Telegram WebApp
