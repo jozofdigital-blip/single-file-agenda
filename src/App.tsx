@@ -10,6 +10,27 @@ import NotFound from "./pages/NotFound";
 import TelegramAuthCallback from "./pages/TelegramAuthCallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+const computeBasename = () => {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  const { hostname, pathname } = window.location;
+  if (!hostname.endsWith("github.io")) {
+    return undefined;
+  }
+
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0) {
+    return undefined;
+  }
+
+  const repoSegment = segments[0];
+  return repoSegment ? `/${repoSegment}` : undefined;
+};
+
+const BASENAME = computeBasename();
+
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -19,9 +40,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={(typeof window !== 'undefined' && window.location.hostname.endsWith('github.io'))
-          ? `/${window.location.pathname.split('/')[1] || ''}/`
-          : '/'}>
+        <BrowserRouter basename={BASENAME ?? "/"}>
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Index />} />
