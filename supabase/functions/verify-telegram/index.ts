@@ -133,10 +133,15 @@ async function ensureUserAndSession(
   let userId: string | null = existingProfile?.id ? String(existingProfile.id) : null;
   let existingUserMetadata: Record<string, unknown> | null = null;
 
-  if (!userId) {
-    const { data: existingUser, error: existingUserError } = await supabase.auth.admin.getUserByEmail(email);
-    if (existingUserError) {
-      console.error("[TG] Failed to check existing user by email:", existingUserError);
+  if (existingProfile?.id) {
+    userId = existingProfile.id as string;
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update(profileUpdate)
+      .eq("id", userId);
+
+    if (updateError) {
+      console.error("[TG] Failed to update profile:", updateError);
     }
     if (existingUser?.user) {
       userId = existingUser.user.id;
