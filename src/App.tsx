@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Archive from "./pages/Archive";
 import AllTasks from "./pages/AllTasks";
 import NotFound from "./pages/NotFound";
+import TelegramAuthCallback from "./pages/TelegramAuthCallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => {
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<TelegramAuthCallback />} />
               <Route path="/archive" element={<Archive />} />
               <Route path="/all-tasks" element={<AllTasks />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
