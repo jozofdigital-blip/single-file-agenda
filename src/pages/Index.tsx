@@ -42,7 +42,7 @@ const Index = () => {
     toast.success('Задача выполнена');
   };
 
-  if (tasksLoading) {
+  if (authLoading || tasksLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
         <p className="text-muted-foreground">Загрузка...</p>
