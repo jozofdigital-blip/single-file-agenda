@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,7 +98,92 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, user }), {
+    if (!user || !user.id) {
+      return new Response(JSON.stringify({ error: "No user data in Telegram response" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Create Supabase admin client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Find or create user by telegram_id
+    const telegramId = user.id;
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("telegram_id", telegramId)
+      .maybeSingle();
+
+    let userId: string;
+
+    if (existingProfile) {
+      // User exists
+      userId = existingProfile.id;
+      console.log("[TG] Existing user found:", userId);
+    } else {
+      // Create new user
+      const email = `tg_${telegramId}@telegram.local`;
+      const password = await sha256Hex(`${telegramId}_${botToken}`);
+
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          telegram_id: telegramId,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          username: user.username,
+        },
+      });
+
+      if (authError || !authData.user) {
+        console.error("[TG] Failed to create user:", authError);
+        return new Response(JSON.stringify({ error: "Failed to create user" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      userId = authData.user.id;
+      console.log("[TG] New user created:", userId);
+
+      // Create profile
+      await supabase.from("profiles").upsert({
+        id: userId,
+        telegram_id: telegramId,
+        username: user.username,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      });
+    }
+
+    // Generate session token for client
+    const email = `tg_${telegramId}@telegram.local`;
+    const password = await sha256Hex(`${telegramId}_${botToken}`);
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (sessionError || !sessionData.session) {
+      console.error("[TG] Failed to create session:", sessionError);
+      return new Response(JSON.stringify({ error: "Failed to create session" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({
+      ok: true,
+      user,
+      session: sessionData.session,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
