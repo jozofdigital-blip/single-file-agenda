@@ -32,6 +32,10 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://muabqlydxqbktkxifahv.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11YWJxbHlkeHFia3RreGlmYWh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTYxMDIsImV4cCI6MjA3NjE3MjEwMn0.z5M0DmI0WpNYvLqi7wDuyFjw3l5H_r7P07EJ9xMQwkY
+          VITE_SUPABASE_PROJECT_ID: muabqlydxqbktkxifahv
 
       - name: SPA fallback (404.html)
         run: cp dist/index.html dist/404.html
