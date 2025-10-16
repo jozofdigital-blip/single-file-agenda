@@ -1,61 +1,38 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { format, parseISO, compareDesc } from "date-fns";
 import { ru } from "date-fns/locale";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { TaskItem } from "@/components/TaskItem";
-
-interface Task {
-  id: string;
-  text: string;
-  date: string;
-  originalDate?: string;
-}
+import { useTelegramAuth } from "@/hooks/useTelegramAuth";
+import { useTasks, Task } from "@/hooks/useTasks";
 
 const AllTasks = () => {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { user, loading: authLoading } = useTelegramAuth();
+  const {
+    tasks,
+    loading: tasksLoading,
+    deleteTask,
+    updateTask,
+  } = useTasks(user?.id);
 
-  useEffect(() => {
-    const savedTasks = localStorage.getItem("tasks");
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    }
-  }, []);
-
-  const handleDeleteTask = (id: string) => {
-    const taskToDelete = tasks.find((t) => t.id === id);
-    if (!taskToDelete) return;
-
-    const updatedTasks = tasks.filter((t) => t.id !== id);
-    setTasks(updatedTasks);
-    localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-
-    const savedArchive = localStorage.getItem("archivedTasks");
-    const archivedTasks = savedArchive ? JSON.parse(savedArchive) : [];
-    const archivedTask = {
-      ...taskToDelete,
-      archivedAt: new Date().toISOString(),
-    };
-    archivedTasks.push(archivedTask);
-    localStorage.setItem("archivedTasks", JSON.stringify(archivedTasks));
+  const handleDeleteTask = async (id: string) => {
+    await deleteTask(id);
   };
 
-  const handleUpdateTask = (id: string, newText: string, newDate?: string) => {
-    const updatedTasks = tasks.map((task) => {
-      if (task.id === id) {
-        return {
-          ...task,
-          text: newText,
-          ...(newDate && { date: newDate }),
-        };
-      }
-      return task;
-    });
-    setTasks(updatedTasks);
-    localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+  const handleUpdateTask = async (id: string, newText: string, newDate?: string) => {
+    await updateTask(id, newText, newDate);
   };
+
+  if (authLoading || tasksLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
+        <p className="text-muted-foreground">Загрузка...</p>
+      </div>
+    );
+  }
 
   const groupedTasks = tasks.reduce((acc, task) => {
     const date = task.date;

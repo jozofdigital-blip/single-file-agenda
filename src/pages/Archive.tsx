@@ -1,46 +1,26 @@
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { ArrowLeft, RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
-interface ArchivedTask {
-  id: string;
-  text: string;
-  date: string;
-  archivedAt: string;
-}
+import { useTelegramAuth } from "@/hooks/useTelegramAuth";
+import { useTasks, ArchivedTask } from "@/hooks/useTasks";
 
 const Archive = () => {
   const navigate = useNavigate();
-  const [archivedTasks, setArchivedTasks] = useState<ArchivedTask[]>([]);
+  const { user, loading: authLoading } = useTelegramAuth();
+  const {
+    archivedTasks,
+    loading: tasksLoading,
+    restoreTask,
+    clearArchive,
+  } = useTasks(user?.id);
 
-  useEffect(() => {
-    const savedArchive = localStorage.getItem("archivedTasks");
-    if (savedArchive) {
-      setArchivedTasks(JSON.parse(savedArchive));
-    }
-  }, []);
-
-  const handleRestore = (task: ArchivedTask) => {
-    // Remove from archive
-    const updatedArchive = archivedTasks.filter((t) => t.id !== task.id);
-    setArchivedTasks(updatedArchive);
-    localStorage.setItem("archivedTasks", JSON.stringify(updatedArchive));
-
-    // Add back to tasks
-    const savedTasks = localStorage.getItem("tasks");
-    const tasks = savedTasks ? JSON.parse(savedTasks) : [];
-    const restoredTask = {
-      id: task.id,
-      text: task.text,
-      date: task.date,
-    };
-    tasks.push(restoredTask);
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-
+  const handleRestore = async (task: any) => {
+    await restoreTask(task);
+    
     toast.success("Задача восстановлена", {
       description: task.text,
     });
@@ -53,9 +33,8 @@ const Archive = () => {
       description: "Это действие нельзя отменить",
       action: {
         label: "Очистить",
-        onClick: () => {
-          setArchivedTasks([]);
-          localStorage.setItem("archivedTasks", JSON.stringify([]));
+        onClick: async () => {
+          await clearArchive();
           toast.success("Архив очищен");
         },
       },
@@ -66,6 +45,14 @@ const Archive = () => {
       duration: 5000,
     });
   };
+
+  if (authLoading || tasksLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-b from-background to-secondary/20">
+        <p className="text-muted-foreground">Загрузка...</p>
+      </div>
+    );
+  }
 
   const groupedByDate = archivedTasks.reduce((acc, task) => {
     if (!acc[task.date]) {

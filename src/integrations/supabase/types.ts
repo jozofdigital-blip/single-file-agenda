@@ -14,7 +14,106 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      archived_tasks: {
+        Row: {
+          archived_at: string
+          date: string
+          id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string
+          date: string
+          id?: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string
+          date?: string
+          id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archived_tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          telegram_id: number | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          telegram_id?: number | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          telegram_id?: number | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          original_date: string | null
+          text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          original_date?: string | null
+          text: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          original_date?: string | null
+          text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
