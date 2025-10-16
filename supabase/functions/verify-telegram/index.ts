@@ -52,6 +52,7 @@ serve(async (req) => {
 
   try {
     const { type, payload, initData } = await req.json();
+    console.log("[TG] Request received, type:", type);
     const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
     if (!botToken) {
       return new Response(JSON.stringify({ error: "TELEGRAM_BOT_TOKEN not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -123,7 +124,21 @@ serve(async (req) => {
     if (existingProfile) {
       // User exists
       userId = existingProfile.id;
-      console.log("[TG] Existing user found:", userId);
+      console.log("[TG] Existing user found:", userId, "telegram_id:", telegramId);
+      
+      // Update profile with latest Telegram data
+      const { error: updateError } = await supabase.from("profiles").update({
+        telegram_id: telegramId,
+        username: user.username,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      }).eq("id", userId);
+      
+      if (updateError) {
+        console.error("[TG] Failed to update profile:", updateError);
+      } else {
+        console.log("[TG] Profile updated with telegram_id:", telegramId);
+      }
     } else {
       // Create new user
       const email = `tg_${telegramId}@telegram.local`;
@@ -153,13 +168,19 @@ serve(async (req) => {
       console.log("[TG] New user created:", userId);
 
       // Create profile
-      await supabase.from("profiles").upsert({
+      const { error: profileError } = await supabase.from("profiles").upsert({
         id: userId,
         telegram_id: telegramId,
         username: user.username,
         first_name: user.first_name,
         last_name: user.last_name,
       });
+      
+      if (profileError) {
+        console.error("[TG] Failed to create profile:", profileError);
+      } else {
+        console.log("[TG] Profile created with telegram_id:", telegramId);
+      }
     }
 
     // Generate session token for client

@@ -19,13 +19,32 @@ export const useTelegramAuth = () => {
   const ensureProfile = async (userId: string, tgUser?: TelegramUser) => {
     try {
       const supabase = await getSupabase();
+      
+      // Check if profile exists first
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('telegram_id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      // Build update payload - only include telegram fields if tgUser is provided
       const payload: any = { id: userId };
       if (tgUser) {
         payload.telegram_id = tgUser.id;
         payload.username = tgUser.username;
         payload.first_name = tgUser.first_name;
         payload.last_name = tgUser.last_name;
+        console.log('[TG AUTH] Updating profile with telegram data:', { id: tgUser.id, username: tgUser.username });
+      } else if (!existingProfile) {
+        // Only set empty profile if it doesn't exist
+        console.log('[TG AUTH] Creating empty profile for user:', userId);
+      } else {
+        // Profile exists and no tgUser data - skip update to preserve telegram_id
+        console.log('[TG AUTH] Profile exists, no telegram data to update');
+        setProfileReady(true);
+        return true;
       }
+      
       const { error } = await supabase.from('profiles').upsert(payload);
       if (error) {
         console.error('[TG AUTH] ensureProfile upsert error:', error);
@@ -56,7 +75,7 @@ export const useTelegramAuth = () => {
       
       const initData = tg.initDataUnsafe;
       const initDataString = (tg as any).initData as string | undefined;
-      console.log("[TG AUTH] initDataUnsafe.user exists:", Boolean(initData?.user));
+      console.log("[TG AUTH] initDataUnsafe.user exists:", Boolean(initData?.user), "initData length:", initDataString?.length || 0);
 
       if (!initDataString) {
         console.error('[TG AUTH] No initData available');
@@ -64,14 +83,17 @@ export const useTelegramAuth = () => {
       }
 
       // Verify on backend and get session
+      console.log("[TG AUTH] Calling verify-telegram edge function...");
       const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke('verify-telegram', {
         body: { type: 'webapp', initData: initDataString },
       });
       
       if (verifyErr || !verifyResp?.ok) {
-        console.error('[TG AUTH] verify-telegram failed', verifyErr || verifyResp);
+        console.error('[TG AUTH] verify-telegram failed', { error: verifyErr, response: verifyResp });
         return;
       }
+
+      console.log("[TG AUTH] verify-telegram response:", { ok: verifyResp.ok, hasSession: !!verifyResp.session });
 
       if (verifyResp.session) {
         // Set session from backend
@@ -86,6 +108,8 @@ export const useTelegramAuth = () => {
         }
         
         console.log('[TG AUTH] Session set successfully');
+      } else {
+        console.error('[TG AUTH] No session in response');
       }
     } catch (error) {
       console.error("[TG AUTH] signInWithTelegram error:", error);
@@ -144,13 +168,22 @@ export const useTelegramAuth = () => {
   const linkTelegramFromBrowser = async (payload: any) => {
     try {
       const supabase = await getSupabase();
+      console.log('[TG AUTH] Browser widget auth, payload:', { id: payload?.id, username: payload?.username });
+      
       // Verify via edge function and get session
       const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke('verify-telegram', {
         body: { type: 'widget', payload },
       });
       
-      if (verifyErr || !verifyResp?.ok) {
-        console.error('[TG AUTH] widget verify failed', verifyErr || verifyResp);
+      if (verifyErr) {
+        console.error('[TG AUTH] widget verify error:', verifyErr);
+        return;
+      }
+
+      console.log('[TG AUTH] widget verify response:', { ok: verifyResp?.ok, hasSession: !!verifyResp?.session });
+      
+      if (!verifyResp?.ok) {
+        console.error('[TG AUTH] widget verify failed:', verifyResp);
         return;
       }
 
@@ -167,6 +200,8 @@ export const useTelegramAuth = () => {
         }
         
         console.log('[TG AUTH] Browser session set successfully');
+      } else {
+        console.error('[TG AUTH] No session in widget response');
       }
     } catch (e) {
       console.error('[TG AUTH] linkTelegramFromBrowser error', e);
