@@ -51,16 +51,20 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-background to-secondary/20">
-      <WeekCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-      <TaskList
-        tasks={tasks}
-        selectedDate={selectedDate}
-        onDeleteTask={handleDeleteTask}
-        onUpdateTask={handleUpdateTask}
-      />
+      {user ? (
+        <>
+          <WeekCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          <TaskList
+            tasks={tasks}
+            selectedDate={selectedDate}
+            onDeleteTask={handleDeleteTask}
+            onUpdateTask={handleUpdateTask}
+          />
+        </>
+      ) : null}
       {!user ? (
       <TelegramLogin
-        variant="inline"
+        variant="full"
         onLogin={signInWithTelegram}
         isInTelegram={isInTelegram}
       />
