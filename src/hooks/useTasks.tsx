@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/lib/supabaseSafe";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -83,6 +83,7 @@ export const useTasks = (userId: string | undefined) => {
     if (!userId) return;
 
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from("tasks")
         .insert({
@@ -119,6 +120,7 @@ export const useTasks = (userId: string | undefined) => {
       const updates: any = { text };
       if (date) updates.date = date;
 
+      const supabase = await getSupabase();
       const { error } = await supabase
         .from("tasks")
         .update(updates)
@@ -144,6 +146,7 @@ export const useTasks = (userId: string | undefined) => {
     if (!userId) return;
 
     try {
+      const supabase = await getSupabase();
       // Get task before deleting
       const task = tasks.find((t) => t.id === id);
       if (!task) return;
@@ -179,6 +182,7 @@ export const useTasks = (userId: string | undefined) => {
     if (!userId) return;
 
     try {
+      const supabase = await getSupabase();
       // Add back to tasks
       const { data, error: addError } = await supabase
         .from("tasks")
@@ -220,6 +224,7 @@ export const useTasks = (userId: string | undefined) => {
     if (!userId) return;
 
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase
         .from("archived_tasks")
         .delete()
@@ -243,6 +248,7 @@ export const useTasks = (userId: string | undefined) => {
     if (overdueTasks.length === 0) return;
 
     try {
+      const supabase = await getSupabase();
       for (const task of overdueTasks) {
         await supabase
           .from("tasks")

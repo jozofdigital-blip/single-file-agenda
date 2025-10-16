@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/lib/supabaseSafe";
 import { Session, User } from "@supabase/supabase-js";
 
 interface TelegramUser {
@@ -18,6 +18,7 @@ export const useTelegramAuth = () => {
 
   const ensureProfile = async (userId: string, tgUser?: TelegramUser) => {
     try {
+      const supabase = await getSupabase();
       const payload: any = { id: userId };
       if (tgUser) {
         payload.telegram_id = tgUser.id;
@@ -40,6 +41,7 @@ export const useTelegramAuth = () => {
 
   const signInWithTelegram = async () => {
     try {
+      const supabase = await getSupabase();
       const isInTelegram = window.Telegram?.WebApp;
       
       // Sign in anonymously first
@@ -90,50 +92,57 @@ export const useTelegramAuth = () => {
 
   useEffect(() => {
     console.log("[TG AUTH] init");
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("[TG AUTH] onAuthStateChange", event, Boolean(session));
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        if (session?.user) {
-          setTimeout(() => {
-            if (!profileReady) {
-              ensureProfile(session.user.id);
-            }
-          }, 0);
-        }
-      }
-    );
+    let unsubscribe: (() => void) | null = null;
 
-    // Check for existing session and Telegram WebApp
-    const initTelegramAuth = async () => {
+    (async () => {
       try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        
-        if (existingSession) {
-          console.log("[TG AUTH] Session exists:", existingSession.user.id);
-          await ensureProfile(existingSession.user.id);
+        const supabase = await getSupabase();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event, session) => {
+            console.log("[TG AUTH] onAuthStateChange", event, Boolean(session));
+            setSession(session);
+            setUser(session?.user ?? null);
+            setLoading(false);
+            if (session?.user) {
+              setTimeout(() => {
+                if (!profileReady) {
+                  ensureProfile(session.user.id);
+                }
+              }, 0);
+            }
+          }
+        );
+        unsubscribe = () => subscription.unsubscribe();
+
+        // Check for existing session and Telegram WebApp
+        try {
+          const { data: { session: existingSession } } = await supabase.auth.getSession();
+          if (existingSession) {
+            console.log("[TG AUTH] Session exists:", existingSession.user.id);
+            await ensureProfile(existingSession.user.id);
+            setLoading(false);
+            return;
+          }
+          console.log("[TG AUTH] No session found");
+        } catch (error) {
+          console.error("[TG AUTH] init error:", error);
+        } finally {
           setLoading(false);
-          return;
         }
-        
-        console.log("[TG AUTH] No session found");
-      } catch (error) {
-        console.error("[TG AUTH] init error:", error);
-      } finally {
+      } catch (e) {
+        console.error("[TG AUTH] supabase init failed", e);
         setLoading(false);
       }
+    })();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
     };
-
-    initTelegramAuth();
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const linkTelegramFromBrowser = async (payload: any) => {
     try {
+      const supabase = await getSupabase();
       // Verify via edge function
       const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke('verify-telegram', {
         body: { type: 'widget', payload },
