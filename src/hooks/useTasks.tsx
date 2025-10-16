@@ -19,7 +19,7 @@ export interface ArchivedTask {
 export const useTasks = (userId: string | undefined) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [archivedTasks, setArchivedTasks] = useState<ArchivedTask[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Fetch tasks from database
   const fetchTasks = async () => {
@@ -45,8 +45,6 @@ export const useTasks = (userId: string | undefined) => {
       }
     } catch (error) {
       console.error("Error fetching tasks:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -258,10 +256,16 @@ export const useTasks = (userId: string | undefined) => {
   };
 
   useEffect(() => {
-    if (userId) {
-      fetchTasks();
-      fetchArchivedTasks();
+    if (!userId) {
+      setTasks([]);
+      setArchivedTasks([]);
+      setLoading(false);
+      return;
     }
+    setLoading(true);
+    Promise.all([fetchTasks(), fetchArchivedTasks()]).finally(() =>
+      setLoading(false)
+    );
   }, [userId]);
 
   return {
