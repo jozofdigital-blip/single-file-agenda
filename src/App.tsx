@@ -7,27 +7,33 @@ import Index from "./pages/Index";
 import Archive from "./pages/Archive";
 import AllTasks from "./pages/AllTasks";
 import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter basename={(typeof window !== 'undefined' && window.location.hostname.endsWith('github.io'))
-        ? `/${window.location.pathname.split('/')[1] || ''}/`
-        : '/'}>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/archive" element={<Archive />} />
-          <Route path="/all-tasks" element={<AllTasks />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  console.log('[APP] render');
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter basename={(typeof window !== 'undefined' && window.location.hostname.endsWith('github.io'))
+          ? `/${window.location.pathname.split('/')[1] || ''}/`
+          : '/'}>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/archive" element={<Archive />} />
+              <Route path="/all-tasks" element={<AllTasks />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

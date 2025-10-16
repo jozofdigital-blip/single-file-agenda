@@ -15,8 +15,23 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <script>
+      (function(){
+        function show(msg){
+          var el = document.getElementById('runtime-error');
+          if(!el){
+            el = document.createElement('div');
+            el.id = 'runtime-error';
+            el.style.cssText = 'position:fixed;inset:8px;z-index:99999;background:rgba(220,38,38,.1);color:#dc2626;padding:12px;border:1px solid #dc2626;border-radius:8px;font:14px/1.4 ui-sans-serif,system-ui;white-space:pre-wrap;';
+            document.body.appendChild(el);
+          }
+          el.textContent = 'Runtime error: ' + msg;
+        }
+        window.addEventListener('error', function(e){ show(e.error ? (e.error.stack||e.error.message) : e.message); });
+        window.addEventListener('unhandledrejection', function(e){ show(e.reason && (e.reason.stack||e.reason.message) || String(e.reason)); });
+      })();
+    </script>
   </head>
 
   <body>
