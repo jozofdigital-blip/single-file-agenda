@@ -303,50 +303,6 @@ export const useTelegramAuth = () => {
     }
   };
 
-  const completeLoginWithToken = async (token: string) => {
-    try {
-      const supabase = await getSupabase();
-      setLoading(true);
-
-      const { data: verifyResp, error: verifyErr } = await supabase.functions.invoke('verify-telegram', {
-        body: { type: 'token', token },
-      });
-
-      if (verifyErr) {
-        console.error('[TG AUTH] token verify error:', verifyErr);
-        return { ok: false, error: verifyErr.message ?? 'Не удалось проверить токен' };
-      }
-
-      if (!verifyResp?.ok || !verifyResp.session) {
-        console.error('[TG AUTH] token verify failed:', verifyResp);
-        return { ok: false, error: verifyResp?.error ?? 'Неверный токен входа' };
-      }
-
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: verifyResp.session.access_token,
-        refresh_token: verifyResp.session.refresh_token,
-      });
-
-      if (sessionError) {
-        console.error('[TG AUTH] setSession error (token flow):', sessionError);
-        return { ok: false, error: sessionError.message };
-      }
-
-      const sessionUserId = verifyResp.session.user?.id;
-      if (sessionUserId) {
-        await ensureProfile(sessionUserId, verifyResp.user ?? null);
-      }
-
-      console.log('[TG AUTH] Session set via token successfully');
-      return { ok: true };
-    } catch (e) {
-      console.error('[TG AUTH] completeLoginWithToken error:', e);
-      return { ok: false, error: e instanceof Error ? e.message : 'Неизвестная ошибка' };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     console.log('[TG AUTH] init');
     let unsubscribe: (() => void) | null = null;
