@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
-const BOT_USERNAME = (import.meta as any).env?.VITE_TELEGRAM_BOT_USERNAME || "my_helpday_bot";
+const RAW_BOT = (import.meta as any).env?.VITE_TELEGRAM_BOT_USERNAME ?? "my_helpday_bot";
+const BOT_USERNAME = String(RAW_BOT).replace(/^@/, "");
 
 interface TelegramLoginProps {
   onLogin: () => void;
