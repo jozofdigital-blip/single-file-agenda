@@ -6,11 +6,28 @@
     <meta name="robots" content="noindex" />
     <script>
       (function () {
+        var STORAGE_KEY = "__SPA_GH_REDIRECT__";
         var l = window.location;
         var segments = l.pathname.split('/').filter(Boolean);
-        var base = segments.length ? '/' + segments[0] + '/' : '/';
-        // Redirect to the app base (project page root)
-        l.replace(base);
+        if (!segments.length) {
+          return;
+        }
+
+        var base = '/' + segments[0] + '/';
+        var pathname = '/' + segments.slice(1).join('/');
+        try {
+          var payload = {
+            pathname: pathname === '//' ? '/' : pathname,
+            search: l.search || '',
+            hash: l.hash || '',
+          };
+          window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch (error) {
+          console.error('Failed to persist GitHub Pages redirect state', error);
+        }
+
+        var redirectUrl = base + (base.indexOf('?') === -1 ? '?gh_redirect=1' : '&gh_redirect=1');
+        l.replace(redirectUrl);
       })();
     </script>
   </head>
