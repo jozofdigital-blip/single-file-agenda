@@ -5,12 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:pages",
-    "build:pages": "vite build --mode pages",
-    "build:pwa": "vite build --mode pwa",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview --mode pages",
-    "preview:pwa": "vite preview --mode pwa"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
