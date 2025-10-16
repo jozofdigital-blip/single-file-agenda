@@ -19,37 +19,38 @@ export const TelegramLogin = ({ onLogin, isInTelegram }: TelegramLoginProps) => 
           </p>
         </div>
 
-        {isInTelegram ? (
-          <div className="space-y-4">
+        <div className="space-y-4">
+          {isInTelegram ? (
             <p className="text-center text-sm text-muted-foreground">
               Нажмите кнопку ниже, чтобы войти через Telegram
             </p>
-            <Button
-              onClick={onLogin}
-              className="w-full h-12 bg-gradient-to-br from-primary to-[hsl(250_70%_60%)] hover:shadow-hover transition-all duration-300"
-            >
-              <svg
-                className="w-5 h-5 mr-2"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
-              </svg>
-              Войти через Telegram
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4 text-center">
-            <div className="bg-secondary/50 rounded-lg p-4">
+          ) : (
+            <div className="bg-secondary/50 rounded-lg p-4 mb-2">
               <p className="text-sm text-muted-foreground">
-                Это приложение предназначено для использования в Telegram Web App
+                💡 Для привязки Telegram откройте приложение через бота в Telegram
               </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Откройте приложение через бота в Telegram для полного функционала
-            </p>
-          </div>
-        )}
+          )}
+          <Button
+            onClick={onLogin}
+            className="w-full h-12 bg-gradient-to-br from-primary to-[hsl(250_70%_60%)] hover:shadow-hover transition-all duration-300"
+          >
+            {isInTelegram ? (
+              <>
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
+                </svg>
+                Войти через Telegram
+              </>
+            ) : (
+              "Начать использование"
+            )}
+          </Button>
+        </div>
 
         <div className="text-center text-xs text-muted-foreground pt-4 border-t">
           Ваши данные надежно хранятся и защищены
