@@ -17,6 +17,34 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
+    <!-- Runtime fallbacks for Supabase configuration (used on GitHub Pages builds) -->
+    <meta name="supabase-url" content="https://muabqlydxqbktkxifahv.supabase.co" />
+    <meta
+      name="supabase-anon-key"
+      content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11YWJxbHlkeHFia3RreGlmYWh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTYxMDIsImV4cCI6MjA3NjE3MjEwMn0.z5M0DmI0WpNYvLqi7wDuyFjw3l5H_r7P07EJ9xMQwkY"
+    />
+
+    <script>
+      (function ensureTrailingSlash() {
+        try {
+          var location = window.location;
+          var pathname = location.pathname || "";
+          if (!pathname) return;
+
+          var lastSegment = pathname.split("/").pop() || "";
+          var looksLikeFile = lastSegment.includes(".");
+          var hasTrailingSlash = pathname.endsWith("/");
+
+          if (!hasTrailingSlash && !looksLikeFile) {
+            var next = pathname + "/" + (location.search || "") + (location.hash || "");
+            location.replace(next);
+          }
+        } catch (error) {
+          console.warn("[INDEX] Failed to normalize trailing slash", error);
+        }
+      })();
+    </script>
+
     <script>
       (function(){
         function show(msg){
