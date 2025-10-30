@@ -4,7 +4,7 @@ import { WeekCalendar } from "@/components/WeekCalendar";
 import { TaskList } from "@/components/TaskList";
 import { TaskInput } from "@/components/TaskInput";
 import { TelegramLogin } from "@/components/TelegramLogin";
-import { UserProfile } from "@/components/UserProfile";
+import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
 import { useTelegramAuth } from "@/hooks/useTelegramAuth";
 import { useTasks } from "@/hooks/useTasks";
@@ -39,13 +39,13 @@ const Index = () => {
     }
   }, [authLoading, user, isInTelegram, signInWithTelegram]);
 
-  const handleAddTask = async (text: string) => {
+  const handleAddTask = async (text: string, time?: string) => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    await addTask(text, dateStr);
+    await addTask(text, dateStr, time);
   };
 
-  const handleUpdateTask = async (id: string, newText: string, newDate: string) => {
-    await updateTask(id, newText, newDate);
+  const handleUpdateTask = async (id: string, newText: string, newDate: string, newTime?: string) => {
+    await updateTask(id, newText, newDate, newTime);
   };
 
   const handleDeleteTask = async (id: string) => {
@@ -60,7 +60,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-background to-secondary/20">
-      {user && <UserProfile userId={user.id} />}
+      {user && <AppHeader userId={user.id} />}
       {user ? (
         <>
           <WeekCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />

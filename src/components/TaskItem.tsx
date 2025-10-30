@@ -1,4 +1,4 @@
-import { Check, Edit2 } from "lucide-react";
+import { Check, Edit2, Clock } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -6,12 +6,13 @@ import { EditTaskDialog } from "./EditTaskDialog";
 
 interface TaskItemProps {
   task: string;
+  time?: string;
   originalDate?: string;
   onDelete: () => void;
-  onUpdate?: (newText: string, newDate: string) => void;
+  onUpdate?: (newText: string, newDate: string, newTime?: string) => void;
 }
 
-export const TaskItem = ({ task, originalDate, onDelete, onUpdate }: TaskItemProps) => {
+export const TaskItem = ({ task, time, originalDate, onDelete, onUpdate }: TaskItemProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [currentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -28,9 +29,9 @@ export const TaskItem = ({ task, originalDate, onDelete, onUpdate }: TaskItemPro
     setIsEditOpen(true);
   };
 
-  const handleSave = (newText: string, newDate: string) => {
+  const handleSave = (newText: string, newDate: string, newTime?: string) => {
     if (onUpdate) {
-      onUpdate(newText, newDate);
+      onUpdate(newText, newDate, newTime);
     }
   };
 
@@ -59,7 +60,15 @@ export const TaskItem = ({ task, originalDate, onDelete, onUpdate }: TaskItemPro
           <Check className="w-3 h-3 text-transparent group-hover:text-primary transition-colors duration-300" />
         </div>
         <div className="flex-1 pr-10">
-          <p className="text-foreground leading-relaxed">{task}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-foreground leading-relaxed">{task}</p>
+            {time && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{time.slice(0, 5)}</span>
+              </div>
+            )}
+          </div>
           {originalDate && (
             <p className="text-xs text-muted-foreground mt-1">
               Перенесено с {format(parseISO(originalDate), "d MMMM", { locale: ru })}
@@ -83,6 +92,7 @@ export const TaskItem = ({ task, originalDate, onDelete, onUpdate }: TaskItemPro
           open={isEditOpen}
           onOpenChange={setIsEditOpen}
           taskText={task}
+          taskTime={time}
           taskDate={originalDate || currentDate}
           onSave={handleSave}
         />

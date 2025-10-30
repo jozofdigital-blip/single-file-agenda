@@ -39,7 +39,7 @@ export const UserProfile = ({ userId }: UserProfileProps) => {
   const initials = profile?.first_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || 'П';
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-background/50 backdrop-blur-sm border-b border-border">
+    <div className="flex items-center gap-3">
       <Avatar className="h-10 w-10">
         {profile?.photo_url && <AvatarImage src={profile.photo_url} alt={displayName} />}
         <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>

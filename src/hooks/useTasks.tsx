@@ -7,6 +7,7 @@ export interface Task {
   id: string;
   text: string;
   date: string;
+  time?: string;
   originalDate?: string;
 }
 
@@ -14,6 +15,7 @@ export interface ArchivedTask {
   id: string;
   text: string;
   date: string;
+  time?: string;
   archivedAt: string;
 }
 
@@ -41,6 +43,7 @@ export const useTasks = (userId: string | undefined) => {
           id: task.id,
           text: task.text,
           date: task.date,
+          time: task.time || undefined,
           originalDate: task.original_date || undefined,
         }));
         setTasks(formattedTasks);
@@ -69,6 +72,7 @@ export const useTasks = (userId: string | undefined) => {
           id: task.id,
           text: task.text,
           date: task.date,
+          time: task.time || undefined,
           archivedAt: task.archived_at,
         }));
         setArchivedTasks(formatted);
@@ -79,7 +83,7 @@ export const useTasks = (userId: string | undefined) => {
   };
 
   // Add new task
-  const addTask = async (text: string, date: string) => {
+  const addTask = async (text: string, date: string, time?: string) => {
     if (!userId) return;
 
     try {
@@ -90,6 +94,7 @@ export const useTasks = (userId: string | undefined) => {
           user_id: userId,
           text,
           date,
+          time: time || null,
         })
         .select()
         .single();
@@ -101,6 +106,7 @@ export const useTasks = (userId: string | undefined) => {
           id: data.id,
           text: data.text,
           date: data.date,
+          time: data.time || undefined,
           originalDate: data.original_date || undefined,
         };
         setTasks((prev) => [...prev, newTask]);
@@ -113,12 +119,13 @@ export const useTasks = (userId: string | undefined) => {
   };
 
   // Update task
-  const updateTask = async (id: string, text: string, date?: string) => {
+  const updateTask = async (id: string, text: string, date?: string, time?: string) => {
     if (!userId) return;
 
     try {
       const updates: any = { text };
       if (date) updates.date = date;
+      if (time !== undefined) updates.time = time || null;
 
       const supabase = await getSupabase();
       const { error } = await supabase
@@ -132,7 +139,7 @@ export const useTasks = (userId: string | undefined) => {
       setTasks((prev) =>
         prev.map((task) =>
           task.id === id
-            ? { ...task, text, ...(date && { date }) }
+            ? { ...task, text, ...(date && { date }), ...(time !== undefined && { time: time || undefined }) }
             : task
         )
       );

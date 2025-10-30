@@ -20,6 +20,7 @@ export type Database = {
           date: string
           id: string
           text: string
+          time: string | null
           user_id: string
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           date: string
           id?: string
           text: string
+          time?: string | null
           user_id: string
         }
         Update: {
@@ -34,6 +36,7 @@ export type Database = {
           date?: string
           id?: string
           text?: string
+          time?: string | null
           user_id?: string
         }
         Relationships: [
@@ -86,6 +89,7 @@ export type Database = {
           id: string
           original_date: string | null
           text: string
+          time: string | null
           updated_at: string
           user_id: string
         }
@@ -95,6 +99,7 @@ export type Database = {
           id?: string
           original_date?: string | null
           text: string
+          time?: string | null
           updated_at?: string
           user_id: string
         }
@@ -104,6 +109,7 @@ export type Database = {
           id?: string
           original_date?: string | null
           text?: string
+          time?: string | null
           updated_at?: string
           user_id?: string
         }
