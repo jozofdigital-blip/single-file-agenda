@@ -4,6 +4,7 @@ import { WeekCalendar } from "@/components/WeekCalendar";
 import { TaskList } from "@/components/TaskList";
 import { TaskInput } from "@/components/TaskInput";
 import { TelegramLogin } from "@/components/TelegramLogin";
+import { UserProfile } from "@/components/UserProfile";
 import { toast } from "sonner";
 import { useTelegramAuth } from "@/hooks/useTelegramAuth";
 import { useTasks } from "@/hooks/useTasks";
@@ -30,6 +31,14 @@ const Index = () => {
     }
   }, [user]);
 
+  // Auto-login if in Telegram Mini App and not logged in
+  useEffect(() => {
+    if (!authLoading && !user && isInTelegram) {
+      console.log('[Index] Auto-login via Telegram Mini App');
+      signInWithTelegram();
+    }
+  }, [authLoading, user, isInTelegram, signInWithTelegram]);
+
   const handleAddTask = async (text: string) => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     await addTask(text, dateStr);
@@ -51,6 +60,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-background to-secondary/20">
+      {user && <UserProfile userId={user.id} />}
       {user ? (
         <>
           <WeekCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />

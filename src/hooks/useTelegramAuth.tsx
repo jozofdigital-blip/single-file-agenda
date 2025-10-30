@@ -34,12 +34,14 @@ const normalizeTelegramUser = (
   const username = typeof record.username === "string" ? record.username : undefined;
   const firstName = typeof record.first_name === "string" ? record.first_name : undefined;
   const lastName = typeof record.last_name === "string" ? record.last_name : undefined;
+  const photoUrl = typeof record.photo_url === "string" ? record.photo_url : undefined;
 
   return {
     id: idValue,
     username,
     first_name: firstName,
     last_name: lastName,
+    photo_url: photoUrl,
   };
 };
 
@@ -116,6 +118,7 @@ export const useTelegramAuth = () => {
         username?: string;
         first_name?: string;
         last_name?: string;
+        photo_url?: string;
       } = { id: userId };
       if (tgUser) {
         const numericId = typeof tgUser.id === 'number' ? tgUser.id : Number(tgUser.id);
@@ -125,9 +128,11 @@ export const useTelegramAuth = () => {
         if (tgUser.username !== undefined) payload.username = tgUser.username;
         if (tgUser.first_name !== undefined) payload.first_name = tgUser.first_name;
         if (tgUser.last_name !== undefined) payload.last_name = tgUser.last_name;
+        if (tgUser.photo_url !== undefined) payload.photo_url = tgUser.photo_url;
         console.log('[TG AUTH] Updating profile with telegram data:', {
           id: tgUser.id,
           username: tgUser.username,
+          photo_url: tgUser.photo_url,
         });
       } else if (!existingProfile) {
         console.log('[TG AUTH] Creating empty profile for user:', userId);
