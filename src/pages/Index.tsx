@@ -44,6 +44,10 @@ const Index = () => {
     await addTask(text, dateStr, time);
   };
 
+  const handleAddTaskWithDate = async (text: string, date: string, time?: string) => {
+    await addTask(text, date, time);
+  };
+
   const handleUpdateTask = async (id: string, newText: string, newDate: string, newTime?: string) => {
     await updateTask(id, newText, newDate, newTime);
   };
@@ -83,7 +87,7 @@ const Index = () => {
           <div className="md:mx-auto md:max-w-2xl text-sm text-muted-foreground">Подготовка профиля...</div>
         </div>
       ) : (
-        <TaskInput onAddTask={handleAddTask} />
+        <TaskInput onAddTask={handleAddTask} onAddTaskWithDate={handleAddTaskWithDate} />
       )}
 
     </div>
