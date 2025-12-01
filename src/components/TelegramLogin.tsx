@@ -94,7 +94,15 @@ export const TelegramLogin = ({ onLogin, onBrowserAuth, isInTelegram, variant = 
               }
             </p>
             {!isInTelegram && (
-              <div ref={widgetRef} className="flex justify-center" />
+              <>
+                <div ref={widgetRef} className="flex justify-center mb-3" />
+                <Button
+                  onClick={handleLoginClick}
+                  className="w-full h-11 bg-gradient-to-br from-primary to-[hsl(250_70%_60%)] hover:shadow-hover transition-all duration-300"
+                >
+                  Открыть Telegram-бота
+                </Button>
+              </>
             )}
           </div>
           {isInTelegram && (
