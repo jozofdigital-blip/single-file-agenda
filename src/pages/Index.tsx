@@ -80,6 +80,7 @@ const Index = () => {
       <TelegramLogin
         variant="full"
         onLogin={signInWithTelegram}
+        onBrowserAuth={linkTelegramFromBrowser}
         isInTelegram={isInTelegram}
       />
       ) : !profileReady ? (
